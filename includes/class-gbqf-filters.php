@@ -164,7 +164,7 @@ class Filters {
         $this->meta_box_enabled = Settings::is_metabox_enabled();
         $this->acf_enabled      = Settings::is_acf_enabled();
 
-        // Get filter priority - default 20 (runs after most plugins including BWS Portal System).
+        // Get filter priority - default 20 (runs after most query-modifying plugins).
         $priority = Settings::get_filter_priority();
 
         // GenerateBlocks 1.x / original Query Loop filter.

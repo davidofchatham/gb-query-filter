@@ -273,7 +273,7 @@ class Settings {
 
 	/**
 	 * Get filter priority setting.
-	 * Default: 20 (runs after most plugins including BWS Portal System).
+	 * Default: 20 (runs after most query-modifying plugins).
 	 *
 	 * @return int
 	 */
