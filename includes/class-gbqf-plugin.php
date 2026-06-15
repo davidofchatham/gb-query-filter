@@ -63,6 +63,7 @@ final class Plugin {
      */
     private function includes() {
         require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-settings.php';
+        require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-params.php';
         require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-blocks.php';
         require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-filters.php';
     }
@@ -78,8 +79,9 @@ final class Plugin {
         // Initialize filters.
         $this->filters = new Filters();
 
-        // Initialize settings (admin only hooks inside constructor).
+        // Initialize settings instance and register admin hooks.
         $this->settings = new Settings();
+        Settings::init();
 
         /**
          * Fires when GB Query Filters is fully loaded.
