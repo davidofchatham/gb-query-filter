@@ -5,6 +5,8 @@
  * Description:       Adds filter UI and logic for GenerateBlocks Query Loop.
  * Version:           0.2.0
  * Author:            Clayton Chase, David Mitchell
+ * License:           GPL-2.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       gb-query-filters
  * Domain Path:       /languages
  */

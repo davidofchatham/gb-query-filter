@@ -40,6 +40,7 @@ below is collapsed into 0.2.0.
 - Always-on `GBQF_META_FIELDS` dev console.log from block editor JS
 
 ### Fixed
+- LICENSE file shipped GPLv3 text while the plugin declared GPL-2.0-or-later; replaced with canonical GPLv2 and added `License`/`License URI` headers to the plugin file
 - `gbqf_preserve_existing_search` filter renamed to canonical `gbqf_preserve_search` (was an undocumented internal name)
 - Duplicate `gbqf-editor` style registration removed from `class-gbqf-blocks.php`
 - Reset URL construction now uses `home_url()` instead of `$_SERVER['HTTP_HOST']` to prevent HTTP Host Header Injection in misconfigured environments
