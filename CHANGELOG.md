@@ -6,7 +6,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.2.0] — 2026
+## [0.2.0] — 2026-06-15
 
 All changes in this release were developed on top of the upstream 0.1.2 baseline.
 There were no intervening tagged releases, so every addition, change, and fix
