@@ -28,6 +28,11 @@
             ? !! window.GBQF_ENABLE_METABOX
             : true;
 
+    const acfIntegrationEnabled =
+        typeof window !== 'undefined' && typeof window.GBQF_ENABLE_ACF !== 'undefined'
+            ? !! window.GBQF_ENABLE_ACF
+            : true;
+
     const settingsUrl =
         typeof window !== 'undefined' && window.GBQF_SETTINGS_URL
             ? window.GBQF_SETTINGS_URL
@@ -111,6 +116,23 @@
                 type: 'array',
                 default: [],
             },
+
+            // ACF integration.
+            enableAcfFilter: {
+                type: 'boolean',
+                default: false,
+            },
+
+            // One or more ACF field names (comma-separated).
+            acfFieldId: {
+                type: 'string',
+                default: '',
+            },
+            // Repeater-style ACF fields with control overrides.
+            acfFields: {
+                type: 'array',
+                default: [],
+            },
         },
 
         edit( props ) {
@@ -130,17 +152,20 @@
                 enableMetaBoxFilter,
                 metaBoxFieldId,
                 metaBoxFields,
+                enableAcfFilter,
+                acfFieldId,
+                acfFields,
             } = attributes;
 
             if ( ! metaBoxIntegrationEnabled && enableMetaBoxFilter ) {
                 setAttributes( { enableMetaBoxFilter: false } );
             }
 
+            if ( ! acfIntegrationEnabled && enableAcfFilter ) {
+                setAttributes( { enableAcfFilter: false } );
+            }
+
             const blockProps = useBlockProps ? useBlockProps() : {};
-            // Debug: verify localized Meta Box fields.
-            /* eslint-disable no-console */
-            console.log( 'GBQF_META_FIELDS', window.GBQF_META_FIELDS );
-            /* eslint-enable no-console */
 
             const suggestedTargetId =
                 targetId ||
@@ -298,6 +323,87 @@
                                 onClick: () => {
                                     const next = metaBoxFields.filter( ( _, i ) => i !== index );
                                     syncMetaBoxFieldId( next );
+                                },
+                            },
+                            ''
+                        )
+                    )
+                );
+            };
+
+            // ACF Fields: Sync CSV <-> Array
+            const syncAcfFieldId = ( fields ) => {
+                const csv = fields
+                    .map( ( f ) => ( f.id || '' ).trim() )
+                    .filter( Boolean )
+                    .join( ', ' );
+                setAttributes( { acfFieldId: csv, acfFields: fields } );
+            };
+
+            const renderAcfFieldRow = ( field, index ) => {
+                return el(
+                    'div',
+                    {
+                        key: `acf-field-${ index }`,
+                        style: {
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            padding: '10px',
+                            border: '1px solid #e2e2e2',
+                            borderRadius: '4px',
+                            marginBottom: '5px',
+                        },
+                        className: 'gbqf-acf-field-row gbqf-acf-row',
+                    },
+                    el(
+                        'div',
+                        { className: 'gbqf-acf-field-id' },
+                        el( TextControl, {
+                            label: __( 'ACF field name', 'gb-query-filters' ),
+                            value: field.id,
+                            onChange: ( v ) => {
+                                const next = [ ...acfFields ];
+                                next[ index ] = { ...field, id: v };
+                                syncAcfFieldId( next );
+                            },
+                            placeholder: __( 'e.g. project_color', 'gb-query-filters' ),
+                            help: __( 'Enter the ACF field name (not key)', 'gb-query-filters' ),
+                        } )
+                    ),
+                    el(
+                        'div',
+                        { className: 'gbqf-acf-control-type' },
+                        el( SelectControl, {
+                            label: __( 'Control type', 'gb-query-filters' ),
+                            value: field.controlType || 'auto',
+                            options: [
+                                { label: __( 'Auto (based on field type)', 'gb-query-filters' ), value: 'auto' },
+                                { label: __( 'Select dropdown', 'gb-query-filters' ), value: 'select' },
+                                { label: __( 'Radio buttons', 'gb-query-filters' ), value: 'radio' },
+                                { label: __( 'Checkboxes', 'gb-query-filters' ), value: 'checkboxes' },
+                                { label: __( 'Text input', 'gb-query-filters' ), value: 'text' },
+                            ],
+                            onChange: ( v ) => {
+                                const next = [ ...acfFields ];
+                                next[ index ] = { ...field, controlType: v };
+                                syncAcfFieldId( next );
+                            },
+                        } )
+                    ),
+                    el(
+                        'div',
+                        { className: 'gbqf-acf-remove' },
+                        el(
+                            Button,
+                            {
+                                isDestructive: true,
+                                variant: 'secondary',
+                                icon: 'trash',
+                                label: __( 'Remove field', 'gb-query-filters' ),
+                                onClick: () => {
+                                    const next = acfFields.filter( ( _, i ) => i !== index );
+                                    syncAcfFieldId( next );
                                 },
                             },
                             ''
@@ -558,6 +664,53 @@
                                             className: 'gbqf-control-full',
                                         },
                                         __( '+ Add Meta Box field', 'gb-query-filters' )
+                                    )
+                                )
+                        ),
+
+                    acfIntegrationEnabled &&
+                        el(
+                            PanelBody,
+                            { title: __( 'ACF Filters', 'gb-query-filters' ), initialOpen: false },
+                            el( ToggleControl, {
+                                label: __( 'Enable ACF Field Filters', 'gb-query-filters' ),
+                                checked: enableAcfFilter,
+                                onChange: ( checked ) =>
+                                    setAttributes( { enableAcfFilter: checked } ),
+                                help: __(
+                                    'Use one or more Advanced Custom Fields as additional filters.',
+                                    'gb-query-filters'
+                                ),
+                                className: 'gbqf-control-full',
+                            } ),
+                            enableAcfFilter &&
+                                el(
+                                    Fragment,
+                                    null,
+                                    el(
+                                        'p',
+                                        { className: 'gbqf-control-helper' },
+                                        __(
+                                            'Add one or more ACF fields to use as filters.',
+                                            'gb-query-filters'
+                                        )
+                                    ),
+                                    el(
+                                        'div',
+                                        { className: 'gbqf-acf-repeater' },
+                                        ( acfFields || [] ).map( ( field, idx ) => renderAcfFieldRow( field, idx ) )
+                                    ),
+                                    el(
+                                        Button,
+                                        {
+                                            variant: 'secondary',
+                                            onClick: () => {
+                                                const next = [ ...acfFields, { id: '', controlType: 'auto' } ];
+                                                syncAcfFieldId( next );
+                                            },
+                                            className: 'gbqf-control-full',
+                                        },
+                                        __( '+ Add ACF field', 'gb-query-filters' )
                                     )
                                 )
                         ),

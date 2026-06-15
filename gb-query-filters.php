@@ -1,11 +1,10 @@
 <?php
 /**
  * Plugin Name:       GB Query Filters
- * Plugin URI:        https://example.com
+ * Plugin URI:        https://github.com/claytonschase/gb-query-filter
  * Description:       Adds filter UI and logic for GenerateBlocks Query Loop.
- * Version:           0.1.2
- * Author:            Clayton Chase
- * Author URI:        https://example.com
+ * Version:           0.2.0
+ * Author:            Clayton Chase, David Mitchell
  * Text Domain:       gb-query-filters
  * Domain Path:       /languages
  */
@@ -14,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-define( 'GBQF_VERSION', '0.1.2' );
+define( 'GBQF_VERSION', '0.2.0' );
 define( 'GBQF_PLUGIN_FILE', __FILE__ );
 define( 'GBQF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'GBQF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
