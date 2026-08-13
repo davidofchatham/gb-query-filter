@@ -54,18 +54,38 @@ class Targeting {
     private static $registered = [];
 
     /**
-     * Default filter scope, from Settings. A block may override it per-loop.
+     * Forced scope, or null to resolve from Settings per loop.
      *
-     * @var string
+     * @var string|null
      */
-    private $default_scope;
+    private $scope_override;
 
     /**
-     * @param string $default_scope Scope to use when a block does not override
-     *                              it. Pass Settings::get_filter_scope().
+     * @param string|null $scope_override Force a scope, bypassing Settings.
+     *                                    Leave null in production.
      */
-    public function __construct( $default_scope ) {
-        $this->default_scope = $default_scope;
+    public function __construct( $scope_override = null ) {
+        $this->scope_override = $scope_override;
+    }
+
+    /**
+     * The scope in force, resolved per loop.
+     *
+     * DELIBERATELY NOT CACHED, and not read in the constructor.
+     * `Settings::get_filter_scope()` applies the documented `gbqf_filter_scope`
+     * filter, and this class is constructed on `plugins_loaded` — earlier than
+     * a theme's functions.php (`after_setup_theme`) and earlier than `init`,
+     * which is where the documented example in docs/developer-filters.md would
+     * normally live. Reading it once at construction silently ignored every
+     * such callback. Resolve late; the option is already cached by WordPress.
+     *
+     * @return string
+     */
+    private function scope() {
+        if ( null !== $this->scope_override ) {
+            return $this->scope_override;
+        }
+        return Settings::get_filter_scope();
     }
 
     /**
@@ -91,22 +111,6 @@ class Targeting {
             'mb_fields'  => isset( $args['mb_fields'] )  ? (array) $args['mb_fields']  : [],
             'acf_fields' => isset( $args['acf_fields'] ) ? (array) $args['acf_fields'] : [],
         ];
-    }
-
-    /**
-     * Every registered target key. Diagnostics only.
-     *
-     * @return string[]
-     */
-    public static function registered_keys() {
-        return array_keys( self::$registered );
-    }
-
-    /**
-     * Forget every registration. Tests only — a request never needs this.
-     */
-    public static function reset() {
-        self::$registered = [];
     }
 
     /**
@@ -143,7 +147,7 @@ class Targeting {
         // 2. Scope, with per-block override.
         $scope = $this->block_override( $attributes, 'scope' );
         if ( null === $scope ) {
-            $scope = $this->default_scope;
+            $scope = $this->scope();
         }
 
         // 3. Developer filter. Kept below the block override to preserve the
@@ -169,11 +173,12 @@ class Targeting {
         }
 
         // Nothing claimed it. Only two things may still filter it: the legacy
-        // 'all' scope, and an explicit force. Both fall back to FLAT mode,
-        // which is the sole route by which a Target with an empty scope id is
-        // ever returned.
+        // 'all' scope, and an explicit force. Both fall back to the unscoped
+        // registration, which is flat by definition — a filter block with no
+        // targetId. build() reads the '' entry when one exists and yields an
+        // empty flat Target when it does not.
         if ( 'all' === $scope || $forced ) {
-            return $this->build_flat();
+            return $this->build( '' );
         }
 
         // 5 and 6: targeted (or an unrecognised scope, treated as targeted).
@@ -228,42 +233,30 @@ class Targeting {
     }
 
     /**
-     * Build a Target from a registered key.
+     * Build the Target for a registered key.
      *
-     * A registration that did not ask for scoped params yields a flat Target,
-     * keeping its field ownership.
+     * THE ONLY PLACE A Target IS CONSTRUCTED, deliberately — the scope id is
+     * the field most easily got wrong, and one construction site means one
+     * place decides it.
      *
-     * @param string $key Registered target key.
+     * The scope id is the key itself when the registration asked for scoped
+     * params, and '' (flat) otherwise. A key of '' is the unscoped filter
+     * block and is always flat. An absent key — no filter block registered
+     * anything — yields an empty flat Target, whose empty field lists the meta
+     * filter builders read as "process every key": the legacy blanket
+     * behaviour 'all' scope has always had.
+     *
+     * @param string $key Registered target key, or '' for the unscoped entry.
      * @return Target
      */
     private function build( $key ) {
-        $data = self::$registered[ $key ];
+        $data = isset( self::$registered[ $key ] )
+            ? self::$registered[ $key ]
+            : [ 'scoped' => false, 'mb_fields' => [], 'acf_fields' => [] ];
 
-        return new Target(
-            ! empty( $data['scoped'] ) ? $key : '',
-            $data['mb_fields'],
-            $data['acf_fields']
-        );
-    }
+        $scope_id = ( '' !== $key && ! empty( $data['scoped'] ) ) ? $key : '';
 
-    /**
-     * Build the flat Target used when nothing claimed the loop but something
-     * authorised filtering anyway ('all' scope, or a forced yes).
-     *
-     * Field ownership comes from the unscoped registration if a filter block
-     * made one; otherwise the lists are empty, which the meta filter builders
-     * read as "process every key" — the legacy blanket behaviour that 'all'
-     * scope has always had.
-     *
-     * @return Target
-     */
-    private function build_flat() {
-        if ( isset( self::$registered[''] ) ) {
-            $data = self::$registered[''];
-            return new Target( '', $data['mb_fields'], $data['acf_fields'] );
-        }
-
-        return new Target( '' );
+        return new Target( $scope_id, $data['mb_fields'], $data['acf_fields'] );
     }
 
     /**

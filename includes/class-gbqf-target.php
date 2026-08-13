@@ -78,15 +78,6 @@ final class Target {
     }
 
     /**
-     * True when this Target reads a scoped `gbqf[key][…]` namespace.
-     *
-     * @return bool
-     */
-    public function is_scoped() {
-        return '' !== $this->scope_id;
-    }
-
-    /**
      * Meta Box field IDs the matching filter block owns.
      *
      * An empty list means "no ownership declared" and the meta filter builders

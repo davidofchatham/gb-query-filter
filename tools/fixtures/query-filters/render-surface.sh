@@ -275,11 +275,11 @@ if [ "${n_leg}" = "4" ]; then
     ok "legacy-class loop NOT filtered by flat params (4 rows) — invariant 2 holds"
 elif [ "${n_leg}" = "1" ]; then
     bad "legacy-class loop WAS filtered by flat params (1 row) — a loop no filter block claims was filtered via the URL. Invariant 2 (CONTEXT.md) violated; see ADR-0001."
-    note "gate passed on the 'gbqf-target-' class prefix, then get_matched_target()"
-    note "returned a scoped=false struct, so Params read the FLAT namespace."
-    note "(Two routes reach that struct — the '' entry this page registers, or"
-    note " the empty default when none exists. Both filter; this page cannot"
-    note " tell them apart, and for invariant 2 the distinction does not matter.)"
+    note 'something is claiming this loop that should not be. Historically (pre-0.4.0)'
+    note "a gate accepted any 'gbqf-target-' class without checking that a filter"
+    note 'block had registered that name; the rule was removed in 0.4.0. Check the'
+    note 'match rules in Targeting::match() — a loop is claimed only by a REGISTERED'
+    note 'HTML id or a REGISTERED target name appearing as one of its classes.'
 else
     bad "legacy-class loop rendered ${n_leg} rows — expected 4 (held) or 1 (violated)"
 fi
@@ -320,8 +320,10 @@ if [ "${n_cm}" = "1" ]; then
 elif [ "${n_cm}" = "4" ]; then
     bad "class-matched loop NOT filtered (4 rows) — the loop is claimed by class but its scoped params did not reach it."
     note 'the Params scope is being taken from the LOOP id, not the matched target key:'
-    note '  includes/class-gbqf-filters.php:416 re-derives an id from the loop attributes'
-    note "  form writes gbqf[gbqf-alias][...], query reads gbqf[gbqf-loop-classmatch][...]"
+    note '  form writes gbqf[gbqf-alias][...], query reads gbqf[gbqf-loop-classmatch][...]'
+    note 'look at whatever chooses the Params scope in Filters, and at Target::scope_id().'
+    note '(No line reference on purpose: this pointed at a line number that later'
+    note ' moved, which sent a reader to unrelated code.)'
 else
     bad "class-matched loop rendered ${n_cm} rows — expected 1 (works) or 4 (namespace mismatch)"
 fi

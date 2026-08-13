@@ -67,7 +67,11 @@ class Filters {
     public function __construct() {
         $this->meta_box_enabled = Settings::is_metabox_enabled();
         $this->acf_enabled      = Settings::is_acf_enabled();
-        $this->targeting        = new Targeting( Settings::get_filter_scope() );
+        // No scope argument: Targeting resolves it per loop, at render time.
+        // Passing Settings::get_filter_scope() here would freeze the
+        // `gbqf_filter_scope` filter at plugins_loaded, before themes and
+        // before init — silently ignoring the documented way to set it.
+        $this->targeting        = new Targeting();
 
         // Get filter priority - default 20 (runs after most query-modifying plugins).
         $priority = Settings::get_filter_priority();

@@ -28,11 +28,12 @@ Target the current WCAG AA level (WCAG 2.2 AA as of 2026-06) — see [ADR-0003](
 
 ## Architecture
 
-Singleton bootstrap in [includes/class-gbqf-plugin.php](includes/class-gbqf-plugin.php) loads four classes (all in the `GBQF\` namespace):
+Singleton bootstrap in [includes/class-gbqf-plugin.php](includes/class-gbqf-plugin.php) loads six classes (all in the `GBQF\` namespace):
 
 - **Settings** ([class-gbqf-settings.php](includes/class-gbqf-settings.php)) — admin page under GenerateBlocks → Query Filters (`admin.php?page=gb-query-filter`). Static accessors (`is_metabox_enabled`, `is_acf_enabled`, `is_debug_enabled`, `get_filter_priority`, `get_filter_scope`, `should_preserve_search`) each wrap `get_option()` + `apply_filters()` so PHP filters still override the stored option. **Never call `get_option()` for these directly elsewhere — go through Settings.**
 - **Params** ([class-gbqf-params.php](includes/class-gbqf-params.php)) — single source for reading filter state from the URL (flat or scoped) and building reset/field-name URLs. Constructed with a `$target_id` (`''` = flat mode). Used by both Blocks and Filters; do not re-read `$_GET` for filter params outside this class.
 - **Blocks** ([class-gbqf-blocks.php](includes/class-gbqf-blocks.php)) — registers the `gbqf/query-filter` block (server-side render), enqueues assets, renders the filter form, feeds taxonomy/MB/ACF field data to the editor via inline scripts (`window.GBQF_TAXONOMIES`, `window.GBQF_META_FIELDS`).
+- **Target** ([class-gbqf-target.php](includes/class-gbqf-target.php)) — immutable value object: a claimed Query Loop plus the fields its filter block owns. Built only by Targeting. See Domain language below for why `scope_id()` matters.
 - **Targeting** ([class-gbqf-targeting.php](includes/class-gbqf-targeting.php)) — decides which Query Loop a filter block may touch. `Targeting::register()` records a rendering filter block; `match( $attributes )` returns a **Target** or `null`. This is the enforcement point for security invariant 2 and [ADR-0001](docs/adr/0001-targeted-scope-default.md). **One question, one answer — do not add a second "should this apply?" check anywhere else.** Before 0.4.0 the decision was split across a gate and a separate lookup that disagreed, which filtered loops no filter block had claimed.
 - **Filters** ([class-gbqf-filters.php](includes/class-gbqf-filters.php)) — hooks `generateblocks_query_loop_args` (GB 1.x) and `generateblocks_query_wp_query_args` (GB 2.0+) to modify `WP_Query` args, for whichever loops `Targeting` hands it a Target for.
 

@@ -6,6 +6,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+---
+
 ## [0.4.0] — 2026-08-13
 
 ### Security
@@ -42,7 +46,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   caller. Both defects above were consequences of that split; neither is expressible now.
 
   `Targeting` owns the registry, the scope decision, the per-block `data-gbqf-*` overrides and the
-  `gbqf_should_apply_to_block` filter. `Filters` sheds ~180 lines and keeps query mutation.
+  `gbqf_should_apply_to_block` filter. `Filters` sheds ~180 lines and keeps query mutation. Scope is
+  resolved **per Query Loop, at render time** — `gbqf_filter_scope` keeps working from a theme's
+  `functions.php` or from `init`, both of which run after the plugin bootstraps.
 
 - **`query-filters` fixture blueprint** (`tools/fixtures/query-filters/`) — the first automated
   coverage of the targeting rule. One page, five Query Loops over the same posts, differing only in

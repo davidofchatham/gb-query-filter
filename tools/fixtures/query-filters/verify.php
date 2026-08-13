@@ -114,6 +114,15 @@ if ( ! $pages ) {
 		? $ok( "classmatch loop id ({$cm['id']}) differs from its target name ({$cm['target']}) — the gap is real" )
 		: $bad( 'classmatch loop id equals its target name — section 5 would match by id and prove nothing' );
 
+	// The target name must actually be a CLASS on that loop. Without this the
+	// loop is claimed by nothing, section 5 reports "not filtered", and that
+	// reads as the namespace-mismatch defect when the real cause is a fixture
+	// that stopped emitting className — the exact vacuous pass this file exists
+	// to prevent.
+	false !== strpos( $content, $cm['class'] )
+		? $ok( "classmatch loop carries class {$cm['class']}" )
+		: $bad( "classmatch loop class {$cm['class']} missing — section 5 would fail for the wrong reason" );
+
 	false !== strpos( $content, '"targetId":"' . $manifest['loops']['scoped']['id'] . '"' )
 		? $ok( 'scoped filter block targets ' . $manifest['loops']['scoped']['id'] )
 		: $bad( 'scoped filter block does not target ' . $manifest['loops']['scoped']['id'] );
