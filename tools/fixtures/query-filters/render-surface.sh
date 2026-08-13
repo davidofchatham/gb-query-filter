@@ -28,6 +28,13 @@
 # There is no third outcome, which is what makes an unexpected count worth
 # stopping on rather than interpreting.
 #
+# BLUEPRINT v3 adds a second axis: field OWNERSHIP (sections 7-9). A Target
+# carries not just which loop a block may touch but which FIELDS that block
+# filters on, and the two custom fields split the posts 2/2 — so a field filter
+# reads as 2 rows, distinguishable from both 4 (nothing applied) and 1 (the
+# search). Sections 7 and 8 assert the owned field filters; section 9 asserts
+# the unowned one does not, on a request that targeting cannot decline.
+#
 # CHARACTERIZATION, NOT SPECIFICATION. Sections 2 and 4 assert what the code
 # currently does, and say so in their labels — they exist because
 # `should_apply_to_attributes()` and `get_matched_target()` walk the same match
@@ -79,6 +86,7 @@ M_CONTROL='GBQFX-CONTROL'
 M_UNSCOPED='GBQFX-UNSCOPED'
 M_SCOPED='GBQFX-SCOPED'
 M_LEGACY='GBQFX-LEGACY'
+M_CLASSMATCH='GBQFX-CLASSMATCH'   # v2
 
 # Resolve the vhost domain from the OLS config, the same source bin/hosts.ps1
 # and bin/smoke.sh read, so the URL can never drift from what OLS serves.
@@ -165,12 +173,12 @@ esac
 
 # All four loops must render all four posts with no filter applied. If any loop
 # is short here, the fixture is wrong and every later count is uninterpretable.
-for pair in "${M_CONTROL}:control" "${M_UNSCOPED}:unscoped" "${M_SCOPED}:scoped" "${M_LEGACY}:legacy"; do
+for pair in "${M_CONTROL}:control" "${M_UNSCOPED}:unscoped" "${M_SCOPED}:scoped" "${M_LEGACY}:legacy" "${M_CLASSMATCH}:classmatch"; do
     marker="${pair%%:*}"; name="${pair##*:}"
     n=$(rows "${BASE}" "${marker}")
-    [ "${n}" = "4" ] || err "loop '${name}' rendered ${n} rows unfiltered, expected 4 — reseed the blueprint before trusting anything below."
+    [ "${n}" = "4" ] || err "loop '${name}' rendered ${n} rows unfiltered, expected 4 — reseed the blueprint (v2+) before trusting anything below."
 done
-ok 'all four loops render 4 rows with no filter params'
+ok 'all five loops render 4 rows with no filter params'
 
 # The filter form itself must be on the page, or the unscoped/scoped sections
 # are testing a page with no filter blocks on it.
@@ -192,10 +200,11 @@ echo "1. scoped filter block, scoped params (the happy path)"
 SCOPED=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bsearch%5D=Bravo' || true)
 [ -n "${SCOPED}" ] || err 'empty response for the scoped request'
 
-expect "${SCOPED}" "${M_SCOPED}"   1 'scoped loop filters on its own scoped params'
-expect "${SCOPED}" "${M_CONTROL}"  4 'control loop untouched by another loop scoped params'
-expect "${SCOPED}" "${M_UNSCOPED}" 4 'unscoped loop untouched by another loop scoped params'
-expect "${SCOPED}" "${M_LEGACY}"   4 'legacy loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_SCOPED}"     1 'scoped loop filters on its own scoped params'
+expect "${SCOPED}" "${M_CONTROL}"    4 'control loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_UNSCOPED}"   4 'unscoped loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_LEGACY}"     4 'legacy loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_CLASSMATCH}" 4 'classmatch loop untouched by another loop scoped params'
 
 # ---------------------------------------------------------------------------
 # 2. Unscoped filter block, flat params — CHARACTERIZATION.
@@ -228,8 +237,9 @@ else
     bad "unscoped loop rendered ${n_uns} rows on flat params — expected 4 (inert) or 1 (filtered)"
 fi
 
-expect "${FLAT}" "${M_CONTROL}" 4 'control loop untouched by flat params'
-expect "${FLAT}" "${M_SCOPED}"  4 'scoped loop untouched by flat params (it reads its own namespace)'
+expect "${FLAT}" "${M_CONTROL}"    4 'control loop untouched by flat params'
+expect "${FLAT}" "${M_SCOPED}"     4 'scoped loop untouched by flat params (it reads its own namespace)'
+expect "${FLAT}" "${M_CLASSMATCH}" 4 'classmatch loop untouched by flat params'
 
 # ---------------------------------------------------------------------------
 # 3. Scoped params naming a loop that no filter block targets.
@@ -243,10 +253,11 @@ echo "3. scoped params for an unregistered target (invariant 2)"
 FORGED=$(fetch 'gbqf%5Bgbqf-loop-control%5D%5Bsearch%5D=Bravo' || true)
 [ -n "${FORGED}" ] || err 'empty response for the forged request'
 
-expect "${FORGED}" "${M_CONTROL}"  4 'control loop ignores params forged in its own name'
-expect "${FORGED}" "${M_UNSCOPED}" 4 'unscoped loop ignores forged params'
-expect "${FORGED}" "${M_SCOPED}"   4 'scoped loop ignores forged params'
-expect "${FORGED}" "${M_LEGACY}"   4 'legacy loop ignores forged params'
+expect "${FORGED}" "${M_CONTROL}"    4 'control loop ignores params forged in its own name'
+expect "${FORGED}" "${M_UNSCOPED}"   4 'unscoped loop ignores forged params'
+expect "${FORGED}" "${M_SCOPED}"     4 'scoped loop ignores forged params'
+expect "${FORGED}" "${M_LEGACY}"     4 'legacy loop ignores forged params'
+expect "${FORGED}" "${M_CLASSMATCH}" 4 'classmatch loop ignores forged params'
 
 # ---------------------------------------------------------------------------
 # 4. Legacy gbqf-target-* class on an UNCLAIMED loop — the one that matters.
@@ -271,11 +282,11 @@ if [ "${n_leg}" = "4" ]; then
     ok "legacy-class loop NOT filtered by flat params (4 rows) — invariant 2 holds"
 elif [ "${n_leg}" = "1" ]; then
     bad "legacy-class loop WAS filtered by flat params (1 row) — a loop no filter block claims was filtered via the URL. Invariant 2 (CONTEXT.md) violated; see ADR-0001."
-    note "gate passed on the 'gbqf-target-' class prefix, then get_matched_target()"
-    note "returned a scoped=false struct, so Params read the FLAT namespace."
-    note "(Two routes reach that struct — the '' entry this page registers, or"
-    note " the empty default when none exists. Both filter; this page cannot"
-    note " tell them apart, and for invariant 2 the distinction does not matter.)"
+    note 'something is claiming this loop that should not be. Historically (pre-0.4.0)'
+    note "a gate accepted any 'gbqf-target-' class without checking that a filter"
+    note 'block had registered that name; the rule was removed in 0.4.0. Check the'
+    note 'match rules in Targeting::match() — a loop is claimed only by a REGISTERED'
+    note 'HTML id or a REGISTERED target name appearing as one of its classes.'
 else
     bad "legacy-class loop rendered ${n_leg} rows — expected 4 (held) or 1 (violated)"
 fi
@@ -286,43 +297,317 @@ fi
 expect "${BASE}" "${M_LEGACY}" 4 'legacy-class loop unaffected with no params present'
 
 # ---------------------------------------------------------------------------
-# 5. Accessibility of the rendered filter form (ADR-0003).
+# 5. Scoped match by CLASS, where the loop id differs from the target name.
+#    (blueprint v2)
+#
+# The filter block registers targetId 'gbqf-alias' and renders its form fields
+# as gbqf[gbqf-alias][...]. The loop matches because 'gbqf-alias' is one of its
+# classes — but the loop's own HTML id is 'gbqf-loop-classmatch'.
+#
+# So the two identities diverge, and which one is handed to Params decides
+# whether the filter works: the matched TARGET KEY ('gbqf-alias') reads the
+# namespace the form actually writes; the LOOP's id reads
+# gbqf[gbqf-loop-classmatch][...], which nothing ever writes.
+#
+# Every section above matches by id, where the two are equal, so this is the
+# first assertion that can tell them apart. Written before the answer was known.
+#
+# 4 rows here is NOT "correctly declined" — the loop IS claimed, by class, and
+# section 0 already proved it renders. 4 rows means claimed-but-unfiltered.
+# ---------------------------------------------------------------------------
+echo ""
+echo "5. scoped match by class, loop id differs from target name (v2)"
+
+ALIAS=$(fetch 'gbqf%5Bgbqf-alias%5D%5Bsearch%5D=Bravo' || true)
+[ -n "${ALIAS}" ] || err 'empty response for the class-match request'
+
+n_cm=$(rows "${ALIAS}" "${M_CLASSMATCH}")
+if [ "${n_cm}" = "1" ]; then
+    ok 'class-matched loop filters on its target scoped params (1 row)'
+elif [ "${n_cm}" = "4" ]; then
+    bad "class-matched loop NOT filtered (4 rows) — the loop is claimed by class but its scoped params did not reach it."
+    note 'the Params scope is being taken from the LOOP id, not the matched target key:'
+    note '  form writes gbqf[gbqf-alias][...], query reads gbqf[gbqf-loop-classmatch][...]'
+    note 'look at whatever chooses the Params scope in Filters, and at Target::scope_id().'
+    note '(No line reference on purpose: this pointed at a line number that later'
+    note ' moved, which sent a reader to unrelated code.)'
+else
+    bad "class-matched loop rendered ${n_cm} rows — expected 1 (works) or 4 (namespace mismatch)"
+fi
+
+# Nothing else may move on this request.
+expect "${ALIAS}" "${M_CONTROL}"  4 'control loop untouched by class-match params'
+expect "${ALIAS}" "${M_SCOPED}"   4 'scoped loop untouched by class-match params'
+expect "${ALIAS}" "${M_UNSCOPED}" 4 'unscoped loop untouched by class-match params'
+expect "${ALIAS}" "${M_LEGACY}"   4 'legacy loop untouched by class-match params'
+
+# ---------------------------------------------------------------------------
+# 6. Accessibility of the rendered filter form (ADR-0003).
 #
 # Cheap to check here because the form is already in the body, and the a11y
 # target is a hard gate on any control this plugin renders. Not a full audit —
 # see .scratch/accessibility-audit/issues/01-baseline-wcag-audit.md.
 # ---------------------------------------------------------------------------
 echo ""
-echo "5. filter form accessibility (ADR-0003, spot checks)"
+echo "6. filter form accessibility (ADR-0003, spot checks)"
 
+# Matched by shape, not by literal id: control ids carry a per-block prefix
+# (gbqf1_, gbqf2_, ...) so that three filter blocks on one page cannot collide.
+# Which number this block gets depends on render order and is not the point —
+# the uniqueness check further down is what holds the prefix to its job.
 case "${BASE}" in
-    *'<label for="gbqf_search_input"'*) ok 'search input has an associated label' ;;
-    *) bad 'search input label is not associated (no <label for="gbqf_search_input">)' ;;
+    *'<label for="gbqf'*'_search_input"'*) ok 'search input has an associated label' ;;
+    *) bad 'search input label is not associated (no <label for="gbqf<n>_search_input">)' ;;
 esac
 
 # A <label> with no `for` and no wrapped control labels nothing.
 #
-# SCOPE, and it matters: the bare-<label> defect at class-gbqf-blocks.php:851 is
-# in the ACF field branch, and this blueprint's filter blocks enable search
-# only. So a zero count here is VACUOUS — it means the branch never rendered,
-# not that it is sound. Say so rather than bank a pass that was never at risk.
-# Covering it needs an ACF-enabled filter block, which needs a seeded ACF field
-# group; that is a blueprint v2 concern.
-bare=$(printf '%s' "${BASE}" | grep -o '<label>' | wc -l | tr -d ' ' || true)
+# Through v2 this check was VACUOUS and said so: the defect is in the custom-field
+# branches, and v1/v2 filter blocks enabled search only, so the branch never
+# rendered and a zero count meant "not reached", not "sound". v3 seeds a Meta Box
+# field and an ACF field, both as `select` — a single control with an id — so the
+# branch is now genuinely exercised.
+#
+# STILL SCOPED, in a different place. v3 pins both fields to `select` on purpose
+# (manifest.php `fields`). Radio/checkbox control types render a GROUP of inputs
+# with no single labellable control, which is an unfixed and separate problem —
+# see .scratch/targeting-module/issues/03-group-control-labelling.md. Nothing
+# below reaches those branches, and that is deliberate, not an oversight.
+# (Numbered 5 through blueprint v1; renumbered to 6 in v2, when the class-match
+# section took 5.)
 case "${BASE}" in
-    *'gbqf-filter-acf'*)
-        if [ "${bare}" = "0" ]; then
-            ok 'no bare <label> tags in the rendered form (ACF branch present)'
-        else
-            bad "${bare} bare <label> tag(s) with no for= attribute — unassociated labels"
-            note 'see includes/class-gbqf-blocks.php:851 (ACF field group)'
-        fi
-        ;;
-    *)
-        note "no ACF filter control on this page — bare-<label> check SKIPPED, not passed (count was ${bare})"
-        note 'the defect at class-gbqf-blocks.php:851 is in the ACF branch; blueprint v2 needs an ACF field group to reach it'
-        ;;
+    *'gbqf-filter-metabox'*) ok 'Meta Box filter control rendered (branch is reachable)' ;;
+    *) bad 'no .gbqf-filter-metabox in the response — the Meta Box control did not render, so the checks below are vacuous' ;;
 esac
+
+case "${BASE}" in
+    *'gbqf-filter-acf'*) ok 'ACF filter control rendered (branch is reachable)' ;;
+    *) bad 'no .gbqf-filter-acf in the response — the ACF control did not render, so the checks below are vacuous' ;;
+esac
+
+# The Meta Box field renders as a single <select>, so its name comes from a
+# <label for> pointing at the control's id.
+case "${BASE}" in
+    *'<label for="'*'mb_gbqf_color"'*) ok 'Meta Box select has an associated label' ;;
+    *) bad 'Meta Box select label is not associated (no <label for="...mb_gbqf_color">)' ;;
+esac
+
+# The ACF field renders as a RADIO GROUP, which has no single control to point
+# at — its name comes from role="group" + aria-labelledby instead. Different
+# mechanism, different code path; a fixture rendering only selects never
+# measures this one.
+case "${BASE}" in
+    *'role="group" aria-labelledby="'*'acf_gbqf_size_label"'*) ok 'ACF radio group is a named group (role=group + aria-labelledby)' ;;
+    *) bad 'ACF radio group has no accessible name (no role="group" aria-labelledby="...acf_gbqf_size_label")' ;;
+esac
+
+bare=$(printf '%s' "${BASE}" | grep -o '<label>' | wc -l | tr -d ' ' || true)
+if [ "${bare}" = "0" ]; then
+    ok 'no bare <label> tags in the rendered form'
+else
+    bad "${bare} bare <label> tag(s) — neither for= nor an id an aria-labelledby points at"
+fi
+
+# EVERY id-reference on the page must resolve to EXACTLY ONE element.
+#
+# Not "at least one": a duplicate id is why this check exists. Control ids used
+# to be fixed strings, so a page with three filter blocks emitted three elements
+# with id="gbqf_search_input". A `for` then resolves to whichever comes first,
+# which may be a control in a different filter form — the label is present,
+# looks correct in the markup, and names the wrong thing. Asserting presence
+# alone passed happily throughout that.
+#
+# Checks both reference kinds, since the two label mechanisms above use one
+# each: `for` for single controls, `aria-labelledby` for groups.
+refs=$(printf '%s' "${BASE}" \
+    | grep -o -E '(for|aria-labelledby)="gbqf[0-9]+_[^"]*"' \
+    | sed -E 's/^[^"]*"//; s/"$//' | sort -u || true)
+
+if [ -z "${refs}" ]; then
+    bad 'no gbqf control id references found at all — the form did not render as expected'
+else
+    dangling=0
+    duplicated=0
+    for ref in ${refs}; do
+        n=$(printf '%s' "${BASE}" | grep -o "id=\"${ref}\"" | wc -l | tr -d ' ' || true)
+        if [ "${n}" = "0" ]; then
+            dangling=$((dangling+1))
+            note "dangling: nothing carries id=\"${ref}\""
+        elif [ "${n}" != "1" ]; then
+            duplicated=$((duplicated+1))
+            note "duplicate: ${n} elements carry id=\"${ref}\""
+        fi
+    done
+
+    ref_count=$(printf '%s\n' "${refs}" | wc -l | tr -d ' ')
+
+    [ "${dangling}" = "0" ] \
+        && ok "every label reference resolves to a real control (${ref_count} checked)" \
+        || bad "${dangling} label reference(s) point at no element"
+
+    [ "${duplicated}" = "0" ] \
+        && ok "every referenced control id is unique on the page (${ref_count} checked)" \
+        || bad "${duplicated} control id(s) appear more than once — labels resolve ambiguously"
+fi
+
+# ---------------------------------------------------------------------------
+# 7. Meta Box field filter through an ID-matched target. (blueprint v3)
+#
+# The scoped filter block owns exactly one Meta Box field, gbqf_color, and the
+# fixture posts split 2/2 on it. So a working field filter shows 2 rows — a
+# count that is neither 4 (no filter applied) nor 1 (the search count), which is
+# what makes it unmistakable.
+#
+# This is the first assertion that a Target carries anything BEYOND a scope: the
+# field list travels with the matched target, and get_meta_filters() is handed
+# it rather than deriving one.
+# ---------------------------------------------------------------------------
+echo ""
+echo "7. Meta Box field filter, id-matched target (v3)"
+
+MB=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5Bgbqf_color%5D=red' || true)
+[ -n "${MB}" ] || err 'empty response for the Meta Box field request'
+
+expect "${MB}" "${M_SCOPED}"     2 'scoped loop filters on its owned Meta Box field'
+expect "${MB}" "${M_CONTROL}"    4 'control loop untouched by a Meta Box field filter'
+expect "${MB}" "${M_UNSCOPED}"   4 'unscoped loop untouched by a Meta Box field filter'
+expect "${MB}" "${M_LEGACY}"     4 'legacy loop untouched by a Meta Box field filter'
+expect "${MB}" "${M_CLASSMATCH}" 4 'classmatch loop untouched by another target Meta Box field'
+
+# ---------------------------------------------------------------------------
+# 8. ACF field filter through a CLASS-matched target. (blueprint v3)
+#
+# The same shape as 7, but on the block whose loop matches by CLASS — so the
+# matched target key ('gbqf-alias') and the loop's own id
+# ('gbqf-loop-classmatch') differ.
+#
+# Section 5 proved the SCOPE is taken from the target key. This proves the FIELD
+# LISTS are too. They are separate reads off the same Target, and a fix that
+# corrected one and not the other would pass section 5 and fail here: the loop
+# would read the right namespace but be handed an empty acf_fields list, so
+# gbqf_size would be skipped as unowned and the count would come back 4.
+#
+# gbqf_size splits the posts 2/2 as well, but across a DIFFERENT pair than
+# gbqf_color — so 2 rows here cannot be the Meta Box filter having leaked.
+# ---------------------------------------------------------------------------
+echo ""
+echo "8. ACF field filter, class-matched target (v3)"
+
+ACF=$(fetch 'gbqf%5Bgbqf-alias%5D%5Bmeta%5D%5Bgbqf_size%5D=large' || true)
+[ -n "${ACF}" ] || err 'empty response for the ACF field request'
+
+n_acf=$(rows "${ACF}" "${M_CLASSMATCH}")
+if [ "${n_acf}" = "2" ]; then
+    ok 'class-matched loop filters on its owned ACF field (2 rows)'
+elif [ "${n_acf}" = "4" ]; then
+    bad 'class-matched loop NOT filtered by its owned ACF field (4 rows)'
+    note 'section 5 passing while this fails means the scope travels off the matched'
+    note 'target key but the FIELD LISTS do not — look at what builds the Target and'
+    note 'at what Filters passes to get_acf_filters().'
+else
+    bad "class-matched loop rendered ${n_acf} rows — expected 2 (works) or 4 (field list not carried)"
+fi
+
+expect "${ACF}" "${M_CONTROL}"  4 'control loop untouched by an ACF field filter'
+expect "${ACF}" "${M_SCOPED}"   4 'scoped loop untouched by another target ACF field'
+expect "${ACF}" "${M_UNSCOPED}" 4 'unscoped loop untouched by an ACF field filter'
+expect "${ACF}" "${M_LEGACY}"   4 'legacy loop untouched by an ACF field filter'
+
+# ---------------------------------------------------------------------------
+# 9. FIELD OWNERSHIP — a block's own namespace does not grant it every field.
+#     (blueprint v3)
+#
+# The ownership rule, and the reason it is not merely tidiness: a filter block
+# declares which fields it filters on, and `Filters::get_meta_filters()` /
+# `get_acf_filters()` skip any key not in that list. Without it, ANY meta key
+# becomes filterable by anyone who can write a URL — including keys the site
+# never meant to expose, on a loop the block legitimately owns. That is a
+# narrower leak than invariant 2 but the same family, and it is the thing these
+# two requests test.
+#
+# Both requests are well-formed and correctly scoped: they address a block's OWN
+# namespace, so targeting cannot decline them. The only thing standing between
+# them and a filtered result is the field list on the Target. 4 rows means the
+# ownership check held; 2 means an unowned field filtered.
+#
+# The two blocks own disjoint fields (manifest.php `filter_blocks`), so each
+# request asks a block to filter on precisely the field the OTHER block owns.
+# ---------------------------------------------------------------------------
+echo ""
+echo "9. field ownership — unowned keys are ignored (v3)"
+
+OWN_A=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5Bgbqf_size%5D=large' || true)
+[ -n "${OWN_A}" ] || err 'empty response for the unowned-ACF-field request'
+
+n_a=$(rows "${OWN_A}" "${M_SCOPED}")
+if [ "${n_a}" = "4" ]; then
+    ok 'scoped loop ignores gbqf_size — its block owns no ACF field (4 rows)'
+else
+    bad "scoped loop rendered ${n_a} rows for a field its block never declared — expected 4"
+    note 'the ACF field list on the Target is being ignored, or a fallback is'
+    note 'processing every key when the list is empty. An empty list must mean'
+    note '"owns nothing", never "owns everything".'
+fi
+
+OWN_B=$(fetch 'gbqf%5Bgbqf-alias%5D%5Bmeta%5D%5Bgbqf_color%5D=red' || true)
+[ -n "${OWN_B}" ] || err 'empty response for the unowned-MetaBox-field request'
+
+n_b=$(rows "${OWN_B}" "${M_CLASSMATCH}")
+if [ "${n_b}" = "4" ]; then
+    ok 'classmatch loop ignores gbqf_color — its block owns no Meta Box field (4 rows)'
+else
+    bad "classmatch loop rendered ${n_b} rows for a field its block never declared — expected 4"
+    note 'same rule as above, on the Meta Box side.'
+fi
+
+# Nothing else may move on either request either.
+expect "${OWN_A}" "${M_CONTROL}" 4 'control loop untouched by an unowned-field request'
+expect "${OWN_B}" "${M_CONTROL}" 4 'control loop untouched by an unowned-field request (ACF side)'
+
+# --- the arbitrary-key oracle -----------------------------------------------
+#
+# The two requests above use the OTHER block's declared field, so each lands on
+# a block whose relevant ownership list is EMPTY. That only exercises the
+# "declared nothing" path.
+#
+# This one is the case the security finding actually names, and it is a
+# different code path: the scoped block declares a NON-EMPTY Meta Box list
+# (gbqf_color), so the request gets past the empty-list early return and has to
+# be rejected by the in_array() membership test instead.
+#
+# The key is `_gbqf_undeclared` — protected, registered by no integration,
+# declared by no block, present on exactly one post. Before the fix this
+# returned 1 row for the correct value and 0 for a wrong one, which is what made
+# it a value oracle rather than merely untidy: the row count answers the
+# question "does any post have this meta value?" for a visitor who was never
+# meant to be able to ask.
+#
+# Both must be 4. Testing BOTH values matters — asserting only the correct one
+# cannot tell "the key was ignored" (4) from "the key filtered and everything
+# matched", and asserting only the wrong one cannot tell it from an empty result
+# set for unrelated reasons.
+echo ""
+echo "   arbitrary undeclared protected key (the oracle this fix closed)"
+
+ORACLE_HIT=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5B_gbqf_undeclared%5D=zulu' || true)
+[ -n "${ORACLE_HIT}" ] || err 'empty response for the oracle (correct value) request'
+
+ORACLE_MISS=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5B_gbqf_undeclared%5D=yankee' || true)
+[ -n "${ORACLE_MISS}" ] || err 'empty response for the oracle (wrong value) request'
+
+n_hit=$(rows "${ORACLE_HIT}" "${M_SCOPED}")
+n_miss=$(rows "${ORACLE_MISS}" "${M_SCOPED}")
+
+if [ "${n_hit}" = "4" ] && [ "${n_miss}" = "4" ]; then
+    ok 'an undeclared protected meta key is ignored, right or wrong value (4/4 rows)'
+elif [ "${n_hit}" != "${n_miss}" ]; then
+    bad "VALUE ORACLE: correct value gave ${n_hit} rows, wrong value gave ${n_miss}"
+    note 'the row count discloses whether a post carries this meta value, to a'
+    note 'visitor who cannot read the meta. Security invariant 1 in CONTEXT.md.'
+    note 'the membership test in get_meta_filters() is not rejecting undeclared keys.'
+else
+    bad "undeclared key changed the result set (${n_hit} rows for both values, expected 4)"
+fi
 
 echo ""
 if [ "${FAIL}" -gt 0 ]; then

@@ -17,6 +17,7 @@ These are the contract, not a decision to revisit. The rationale for *how* they 
 
 1. **No privilege leak via filtering.** Front-end filtering must not expose anything a user couldn't see without the filter. URL-param tampering must not override a Query Loop's preset filters (e.g. changing post type, unsetting a required taxonomy term).
 2. **No filtering an unconnected loop.** A user must not be able to filter a Query Loop that has no GBQF filter block connected to it — not via URL params, DOM injection, or retargeting a filter's attributes at another loop. See [ADR-0001](docs/adr/0001-targeted-scope-default.md).
+3. **No filtering on a field the block does not own.** A filter block declares the custom fields it filters on (`metaBoxFields` / `acfFields`, carried on the **Target** as `mb_fields()` / `acf_fields()`). Any other meta key in that block's URL namespace must be ignored. **An empty list means owns nothing, never owns everything** — the inverse was the pre-0.4.0 behaviour and made every meta key on the site filterable through a loop the block legitimately claimed, protected `_`-prefixed keys included, which is a value oracle and a breach of invariant 1. Enforced in `Filters::get_meta_filters()` / `get_acf_filters()`.
 
 Enforcement: sanitize all `$_GET`/`$_POST`/`$_SERVER` input (`sanitize_text_field`, `sanitize_key`, `absint`, `esc_url`); escape all output (`esc_html`/`esc_attr`/`esc_url`/`wp_json_encode`); `$wpdb->prepare()` for any raw SQL; nonces + capability checks for state-changing/admin ops. Query args are sanitized before reaching `WP_Query`. The reset URL is built with `home_url()` (not `$_SERVER['HTTP_HOST']`) to avoid Host Header Injection — see [ADR-0002](docs/adr/0002-url-params-as-filter-state.md).
 
@@ -28,24 +29,33 @@ Target the current WCAG AA level (WCAG 2.2 AA as of 2026-06) — see [ADR-0003](
 
 ## Architecture
 
-Singleton bootstrap in [includes/class-gbqf-plugin.php](includes/class-gbqf-plugin.php) loads four classes (all in the `GBQF\` namespace):
+Singleton bootstrap in [includes/class-gbqf-plugin.php](includes/class-gbqf-plugin.php) loads six classes (all in the `GBQF\` namespace):
 
 - **Settings** ([class-gbqf-settings.php](includes/class-gbqf-settings.php)) — admin page under GenerateBlocks → Query Filters (`admin.php?page=gb-query-filter`). Static accessors (`is_metabox_enabled`, `is_acf_enabled`, `is_debug_enabled`, `get_filter_priority`, `get_filter_scope`, `should_preserve_search`) each wrap `get_option()` + `apply_filters()` so PHP filters still override the stored option. **Never call `get_option()` for these directly elsewhere — go through Settings.**
 - **Params** ([class-gbqf-params.php](includes/class-gbqf-params.php)) — single source for reading filter state from the URL (flat or scoped) and building reset/field-name URLs. Constructed with a `$target_id` (`''` = flat mode). Used by both Blocks and Filters; do not re-read `$_GET` for filter params outside this class.
 - **Blocks** ([class-gbqf-blocks.php](includes/class-gbqf-blocks.php)) — registers the `gbqf/query-filter` block (server-side render), enqueues assets, renders the filter form, feeds taxonomy/MB/ACF field data to the editor via inline scripts (`window.GBQF_TAXONOMIES`, `window.GBQF_META_FIELDS`).
-- **Filters** ([class-gbqf-filters.php](includes/class-gbqf-filters.php)) — hooks `generateblocks_query_loop_args` (GB 1.x) and `generateblocks_query_wp_query_args` (GB 2.0+) to modify `WP_Query` args. `should_apply_to_attributes()` gates which loops a filter touches.
+- **Target** ([class-gbqf-target.php](includes/class-gbqf-target.php)) — immutable value object: a claimed Query Loop plus the fields its filter block owns. Built only by Targeting. See Domain language below for why `scope_id()` matters.
+- **Targeting** ([class-gbqf-targeting.php](includes/class-gbqf-targeting.php)) — decides which Query Loop a filter block may touch. `Targeting::register()` records a rendering filter block; `match( $attributes )` returns a **Target** or `null`. This is the enforcement point for security invariant 2 and [ADR-0001](docs/adr/0001-targeted-scope-default.md). **One question, one answer — do not add a second "should this apply?" check anywhere else.** Before 0.4.0 the decision was split across a gate and a separate lookup that disagreed, which filtered loops no filter block had claimed.
+- **Filters** ([class-gbqf-filters.php](includes/class-gbqf-filters.php)) — hooks `generateblocks_query_loop_args` (GB 1.x) and `generateblocks_query_wp_query_args` (GB 2.0+) to modify `WP_Query` args, for whichever loops `Targeting` hands it a Target for.
 
 **Frontend JS** ([assets/js/gbqf-frontend.js](assets/js/gbqf-frontend.js)): AJAX fetch + Query Loop content swap + URL update via `history.replaceState`; auto-apply on change/Enter; reset-button visibility; graceful fallback to plain form submit. **Editor JS** ([assets/js/gbqf-query-filter-block.js](assets/js/gbqf-query-filter-block.js)): registers the block and its attribute UI.
+
+## Domain language
+
+- **Target** — a Query Loop that a filter block has claimed, plus what that block owns (its Meta Box and ACF field lists). Represented by [class-gbqf-target.php](includes/class-gbqf-target.php), immutable, built only by Targeting.
+- **Scope ID** — a Target's `scope_id()`: the key the matching filter block *registered*, which is what selects the URL namespace. **Never the Query Loop's own HTML ID** — the two differ whenever the match was by class, and confusing them made class-based targeting a silent no-op before 0.4.0. Empty string means flat mode.
+- **Targeting rule** — registered HTML ID, then registered target name as a whole class name. Nothing else claims a loop.
 
 ## Non-obvious gotchas
 
 - **HTML ID location:** GenerateBlocks stores a block's HTML ID at `attributes['htmlAttributes']['id']`, *not* the standard `attributes['anchor']`. Check both. For GB Query blocks with no manual ID, the unique class is `gb-query-{uniqueId}`.
-- **Targeting is the default invariant:** default scope is `'targeted'` — a filter only affects the Query Loop whose HTML ID or class matches the filter block's `targetId`. `'all'` mode exists as a legacy escape hatch via the `gbqf_filter_scope` filter, but targeted is the contract. Do not reintroduce blanket "apply to every loop" behavior. See [ADR-0001](docs/adr/0001-targeted-scope-default.md).
+- **Targeting is the default invariant:** default scope is `'targeted'` — a filter only affects the Query Loop whose HTML ID or class matches the filter block's `targetId`. `'all'` mode exists as a legacy escape hatch via the `gbqf_filter_scope` filter, but targeted is the contract. Do not reintroduce blanket "apply to every loop" behavior. An **unrecognised** scope value is treated as `'targeted'` (fail closed) — it used to mean "apply to everything", so a typo re-enabled the blanket behavior. See [ADR-0001](docs/adr/0001-targeted-scope-default.md).
+- **An unscoped filter block claims nothing under targeted scope.** It registers the key `''`, and a Query Loop's derived ID is never empty, so no loop can match it. That is ADR-0001 working, not a bug — but it means the flat `gbqf_*` URL convention below is reachable *only* under `'all'` scope or a force-enabled loop, even though `Blocks` still renders flat field names and a flat reset URL for such a block.
 - **Hook priority 20** (not WP default 10, configurable via `gbqf_filter_priority`): a best-effort attempt to run *after* other query-modifying plugins. It is **not** a guarantee — a plugin at >20 or a 20-tie defeats it. The real contract is the *merge semantics* (GBQF preserves existing query args at any priority); losing the ordering race makes the filter silently no-op, never a security breach. See [ADR-0004](docs/adr/0004-merge-preserving-query-modification.md).
 
 ## URL parameter conventions
 
-Flat mode (no `targetId`) — prefix `gbqf_`:
+Flat mode (no `targetId`) — prefix `gbqf_`. **Reachable only under `'all'` scope or a force-enabled loop** (see gotchas above); under the default `'targeted'` scope these params reach no Query Loop:
 - Search `?gbqf_search=kw` · Categories `?gbqf_cat[]=1` · Tags `?gbqf_tag[]=5`
 - Custom taxonomies `?gbqf_tax[slug][]=10`
 - Meta + ACF (unified, source-agnostic) `?gbqf_meta[field]=value`, arrays `?gbqf_meta[colors][]=red`
@@ -66,4 +76,8 @@ Full param/data-attribute reference: [docs/developer-filters.md](docs/developer-
 
 ## Testing
 
-Requires a live WordPress install with GenerateBlocks active, a page with a Query Loop, and the GB Query Filter block above it. Meta Box / ACF optional for those integrations. No automated test suite.
+Requires a live WordPress install with GenerateBlocks active, a page with a Query Loop, and the GB Query Filter block above it. Meta Box / ACF optional for those integrations.
+
+**Automated coverage exists for the targeting rule and custom-field ownership:** the `query-filters` fixture blueprint at [tools/fixtures/query-filters/](tools/fixtures/query-filters/) — see its README. It seeds a real Meta Box field and a real ACF field (not mocks), rendered as a `select` and a radio group respectively, so both integrations and both control shapes are exercised over HTTP. The remaining control types (Meta Box `text`; ACF `checkboxes`, `true_false`, `text`, no-choices fallback) are **not** rendered by any fixture. Taxonomy filtering, the AJAX path, and the JS-side targeting rule in `gbqf-frontend.js` are **not** covered — the blueprint keeps `enableAjax` false throughout so a JS-side decision cannot colour a PHP-side result. Everything else is manual.
+
+wp-cli cannot see targeting at all: registration happens in the filter block's `render_callback` and the decision inside `generateblocks_query_wp_query_args` during a render, so under wp-cli neither fires and every "this loop was not filtered" check passes vacuously. Hence the split between `verify.php` (fixtures are real) and `render-surface.sh` (behaviour, over real HTTP).

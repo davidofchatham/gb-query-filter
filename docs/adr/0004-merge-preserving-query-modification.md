@@ -28,7 +28,7 @@ This holds at **any** priority. It is the property that must never regress.
 ## Consequences
 
 - **Known limitation — priority 20 can still conflict.** A plugin registering at >20, or another callback that also picks 20 (tie → undefined registration order), defeats "run last." There is no priority value that wins universally.
-- **Failure mode is benign for security.** If ordering is lost and a later plugin overwrites GBQF's additions, the visible effect is that the filter does nothing for that loop — it does **not** breach the security invariants in [CONTEXT.md](../../CONTEXT.md). Invariant 1 (no privilege leak) and invariant 2 (no filtering an unconnected loop) are enforced in `should_apply_to_attributes()` and input sanitization, independent of priority. Priority affects *whether the filter visibly applies*, never *what a user is allowed to see*.
+- **Failure mode is benign for security.** If ordering is lost and a later plugin overwrites GBQF's additions, the visible effect is that the filter does nothing for that loop — it does **not** breach the security invariants in [CONTEXT.md](../../CONTEXT.md). Invariant 1 (no privilege leak) and invariant 2 (no filtering an unconnected loop) are enforced in `Targeting::match()` and input sanitization, independent of priority. Priority affects *whether the filter visibly applies*, never *what a user is allowed to see*.
 - A site with a known conflicting plugin can retune via `gbqf_filter_priority`; there is no setting that removes the underlying fragility.
 
 ## Alternatives rejected
