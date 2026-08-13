@@ -665,14 +665,35 @@ class Blocks {
         // -----------------------
         // FORM START
         // -----------------------
+
+        // Per-block prefix for every control id in this form.
+        //
+        // Ids were previously fixed strings ('gbqf_search_input', 'gbqf_cat_12',
+        // 'gbqf_mb_colour'), which are only unique while a page carries ONE
+        // filter block. Two blocks — the ordinary case for a page with two
+        // Query Loops — emitted duplicate ids, and a duplicate id makes every
+        // `for` on the page ambiguous: the browser and assistive tech resolve
+        // it to the first match, so a label could name a control inside a
+        // different filter form. Unique ids are what makes an association
+        // mean anything (ADR-0003).
+        //
+        // A per-request counter rather than the targetId: an unscoped block has
+        // no targetId, and two unscoped blocks on one page must still differ.
+        // Ids are not documented, styled, or referenced by JS — they exist
+        // solely to bind a label to its control — so the value only has to be
+        // unique, not stable.
+        static $block_seq = 0;
+        $block_seq++;
+        $cid = 'gbqf' . $block_seq . '_';
+
         $html .= '<form class="gbqf-filter-form" method="get">';
 
         // SEARCH FIELD
         if ( $enable_search ) {
             $html .= '<div class="gbqf-filter-field gbqf-filter-search">';
             // Label visually hidden, placeholder provides prompt.
-            $html .= '<label for="gbqf_search_input" class="screen-reader-text">' . esc_html__( 'Search', 'gb-query-filter' ) . '</label>';
-            $html .= '<input type="text" id="gbqf_search_input" name="' . esc_attr( $name_search ) . '" value="' . esc_attr( $current_search ) . '" placeholder="' . esc_attr__( 'Search', 'gb-query-filter' ) . '" />';
+            $html .= '<label for="' . esc_attr( $cid . 'search_input' ) . '" class="screen-reader-text">' . esc_html__( 'Search', 'gb-query-filter' ) . '</label>';
+            $html .= '<input type="text" id="' . esc_attr( $cid . 'search_input' ) . '" name="' . esc_attr( $name_search ) . '" value="' . esc_attr( $current_search ) . '" placeholder="' . esc_attr__( 'Search', 'gb-query-filter' ) . '" />';
             $html .= '</div>';
         }
 
@@ -695,7 +716,7 @@ class Blocks {
                 foreach ( $categories as $cat ) {
                     $cat_id   = (int) $cat->term_id;
                     $checked  = in_array( $cat_id, $selected_cats, true );
-                    $field_id = 'gbqf_cat_' . $cat_id;
+                    $field_id = $cid . 'cat_' . $cat_id;
 
                     $html .= '<label for="' . esc_attr( $field_id ) . '" class="gbqf-filter-option">';
                     $html .= '<input type="checkbox" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $name_cat ) . '" value="' . esc_attr( $cat_id ) . '" ' . checked( $checked, true, false ) . ' />';
@@ -727,7 +748,7 @@ class Blocks {
                 foreach ( $tags as $tag ) {
                     $tag_id   = (int) $tag->term_id;
                     $checked  = in_array( $tag_id, $selected_tags, true );
-                    $field_id = 'gbqf_tag_' . $tag_id;
+                    $field_id = $cid . 'tag_' . $tag_id;
 
                     $html .= '<label for="' . esc_attr( $field_id ) . '" class="gbqf-filter-option">';
                     $html .= '<input type="checkbox" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $name_tag ) . '" value="' . esc_attr( $tag_id ) . '" ' . checked( $checked, true, false ) . ' />';
@@ -768,7 +789,7 @@ class Blocks {
                     foreach ( $terms as $term ) {
                         $term_id  = (int) $term->term_id;
                         $checked  = in_array( $term_id, $selected_for_tax, true );
-                        $field_id = 'gbqf_tax_' . $slug . '_' . $term_id;
+                        $field_id = $cid . 'tax_' . $slug . '_' . $term_id;
 
                         $html .= '<label for="' . esc_attr( $field_id ) . '" class="gbqf-filter-option">';
                         $html .= '<input type="checkbox" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( sprintf( $name_tax_fmt, $slug ) ) . '" value="' . esc_attr( $term_id ) . '" ' . checked( $checked, true, false ) . ' />';
@@ -795,23 +816,30 @@ class Blocks {
 
                 // A `for` is only honest when a single control below actually
                 // carries that id. The radio branch renders a GROUP of inputs
-                // and gives none of them `gbqf_mb_{id}`, so a `for` there is a
+                // and gives none of them `{cid}mb_{id}`, so a `for` there is a
                 // dangling reference — worse than no association, because
-                // assistive tech follows it to nothing. Emit it only for the
-                // select / text branches, which do set the id.
-                $labels_single_control = ! ( $has_options && ! empty( $options ) && 'radio' === $control_type );
+                // assistive tech follows it to nothing.
+                //
+                // So the label is emitted one of two ways: `for` when a single
+                // control below sets that id, and an `id` of its own when the
+                // branch renders a group, which the group's `aria-labelledby`
+                // then points back at. Either way the name is programmatic; a
+                // group that is merely adjacent to text has no accessible name
+                // at all (ADR-0003).
+                $control_id            = $cid . 'mb_' . $field_id;
+                $has_labellable_control = ! ( $has_options && ! empty( $options ) && 'radio' === $control_type );
 
                 $html .= '<div class="gbqf-filter-field gbqf-filter-metabox gbqf-filter-metabox-' . esc_attr( $field_id ) . '">';
-                $html .= $labels_single_control
-                    ? '<label for="gbqf_mb_' . esc_attr( $field_id ) . '">'
-                    : '<label>';
+                $html .= $has_labellable_control
+                    ? '<label for="' . esc_attr( $control_id ) . '">'
+                    : '<label id="' . esc_attr( $control_id . '_label' ) . '">';
                 $html .= esc_html( $label );
                 $html .= '</label>';
 
                 if ( $has_options && ! empty( $options ) ) {
 
                     if ( 'radio' === $control_type ) {
-                        $html .= '<div class="gbqf-filter-options">';
+                        $html .= '<div class="gbqf-filter-options" role="group" aria-labelledby="' . esc_attr( $control_id . '_label' ) . '">';
                         $html .= '<label class="gbqf-filter-option">';
                         $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
                         $html .= '<span>' . esc_html__( 'Any', 'gb-query-filter' ) . '</span>';
@@ -828,9 +856,9 @@ class Blocks {
 
                         $html .= '</div>';
                     } elseif ( 'text' === $control_type ) {
-                        $html .= '<input type="text" id="gbqf_mb_' . esc_attr( $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="' . esc_attr( $selected ) . '" />';
+                        $html .= '<input type="text" id="' . esc_attr( $cid . 'mb_' . $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="' . esc_attr( $selected ) . '" />';
                     } else {
-                        $html .= '<select id="gbqf_mb_' . esc_attr( $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '">';
+                        $html .= '<select id="' . esc_attr( $cid . 'mb_' . $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '">';
                         $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 
                         foreach ( $options as $opt_value => $opt_label ) {
@@ -844,7 +872,7 @@ class Blocks {
                     }
                 } else {
                     // Fallback: plain text input for this meta key.
-                    $html .= '<input type="text" id="gbqf_mb_' . esc_attr( $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="' . esc_attr( $selected ) . '" />';
+                    $html .= '<input type="text" id="' . esc_attr( $cid . 'mb_' . $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="' . esc_attr( $selected ) . '" />';
                 }
 
                 $html .= '</div>';
@@ -862,26 +890,31 @@ class Blocks {
                 $field_type   = $field_data['field_type'];
                 $is_multi     = $field_data['is_multi'];
 
-                // Same rule as the Meta Box branch above: associate the label
-                // only where a single control below carries `gbqf_acf_{name}`.
-                // true_false, checkboxes and radio all render GROUPS of inputs
-                // with no such id; select, text and the no-choices fallback set
-                // it. This label was previously bare in every case, so even the
+                // Same rule as the Meta Box branch above. true_false,
+                // checkboxes and radio all render GROUPS of inputs with no
+                // single id; select, text and the no-choices fallback set one.
+                // This label was previously bare in every case, so even the
                 // select and text controls — the ones a `for` fits exactly —
                 // had no programmatic association at all (ADR-0003).
-                $labels_single_control = ( 'true_false' !== $field_type )
+                $control_id             = $cid . 'acf_' . $field_name;
+                $has_labellable_control = ( 'true_false' !== $field_type )
                     && ! ( $has_choices && ! empty( $choices ) && in_array( $control_type, [ 'checkboxes', 'radio' ], true ) );
 
                 $html .= '<div class="gbqf-filter-field gbqf-filter-acf gbqf-filter-acf-' . esc_attr( $field_name ) . '">';
-                $html .= $labels_single_control
-                    ? '<label for="gbqf_acf_' . esc_attr( $field_name ) . '">'
-                    : '<label>';
+                $html .= $has_labellable_control
+                    ? '<label for="' . esc_attr( $control_id ) . '">'
+                    : '<label id="' . esc_attr( $control_id . '_label' ) . '">';
                 $html .= esc_html( $label );
                 $html .= '</label>';
 
+                // Every group branch below opens with this. Built once so the
+                // three cannot drift apart.
+                $group_open = '<div class="gbqf-filter-options" role="group" aria-labelledby="'
+                    . esc_attr( $control_id . '_label' ) . '">';
+
                 // Handle true/false field with Yes/No options.
                 if ( 'true_false' === $field_type ) {
-                    $html .= '<div class="gbqf-filter-options">';
+                    $html .= $group_open;
                     $html .= '<label class="gbqf-filter-option">';
                     $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
                     $html .= '<span>' . esc_html__( 'Any', 'gb-query-filter' ) . '</span>';
@@ -901,7 +934,7 @@ class Blocks {
                     if ( 'checkboxes' === $control_type ) {
                         // Multiple checkbox selections.
                         $selected_array = is_array( $selected ) ? $selected : [];
-                        $html .= '<div class="gbqf-filter-options">';
+                        $html .= $group_open;
 
                         foreach ( $choices as $choice_value => $choice_label ) {
                             $choice_value = (string) $choice_value;
@@ -915,7 +948,7 @@ class Blocks {
                         $html .= '</div>';
                     } elseif ( 'radio' === $control_type ) {
                         // Radio button group.
-                        $html .= '<div class="gbqf-filter-options">';
+                        $html .= $group_open;
                         $html .= '<label class="gbqf-filter-option">';
                         $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
                         $html .= '<span>' . esc_html__( 'Any', 'gb-query-filter' ) . '</span>';
@@ -932,10 +965,10 @@ class Blocks {
                         $html .= '</div>';
                     } elseif ( 'text' === $control_type ) {
                         // Text input (user choice override).
-                        $html .= '<input type="text" id="gbqf_acf_' . esc_attr( $field_name ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="' . esc_attr( $selected ) . '" />';
+                        $html .= '<input type="text" id="' . esc_attr( $cid . 'acf_' . $field_name ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="' . esc_attr( $selected ) . '" />';
                     } else {
                         // Default: select dropdown.
-                        $html .= '<select id="gbqf_acf_' . esc_attr( $field_name ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '">';
+                        $html .= '<select id="' . esc_attr( $cid . 'acf_' . $field_name ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '">';
                         $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 
                         foreach ( $choices as $choice_value => $choice_label ) {
@@ -948,7 +981,7 @@ class Blocks {
                     }
                 } else {
                     // No choices: fallback to text input.
-                    $html .= '<input type="text" id="gbqf_acf_' . esc_attr( $field_name ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="' . esc_attr( $selected ) . '" />';
+                    $html .= '<input type="text" id="' . esc_attr( $cid . 'acf_' . $field_name ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="' . esc_attr( $selected ) . '" />';
                 }
 
                 $html .= '</div>';

@@ -351,9 +351,13 @@ expect "${ALIAS}" "${M_LEGACY}"   4 'legacy loop untouched by class-match params
 echo ""
 echo "6. filter form accessibility (ADR-0003, spot checks)"
 
+# Matched by shape, not by literal id: control ids carry a per-block prefix
+# (gbqf1_, gbqf2_, ...) so that three filter blocks on one page cannot collide.
+# Which number this block gets depends on render order and is not the point —
+# the uniqueness check further down is what holds the prefix to its job.
 case "${BASE}" in
-    *'<label for="gbqf_search_input"'*) ok 'search input has an associated label' ;;
-    *) bad 'search input label is not associated (no <label for="gbqf_search_input">)' ;;
+    *'<label for="gbqf'*'_search_input"'*) ok 'search input has an associated label' ;;
+    *) bad 'search input label is not associated (no <label for="gbqf<n>_search_input">)' ;;
 esac
 
 # A <label> with no `for` and no wrapped control labels nothing.
@@ -381,33 +385,69 @@ case "${BASE}" in
     *) bad 'no .gbqf-filter-acf in the response — the ACF control did not render, so the checks below are vacuous' ;;
 esac
 
+# The Meta Box field renders as a single <select>, so its name comes from a
+# <label for> pointing at the control's id.
 case "${BASE}" in
-    *'<label for="gbqf_mb_gbqf_color"'*) ok 'Meta Box select has an associated label' ;;
-    *) bad 'Meta Box select label is not associated (no <label for="gbqf_mb_gbqf_color">)' ;;
+    *'<label for="'*'mb_gbqf_color"'*) ok 'Meta Box select has an associated label' ;;
+    *) bad 'Meta Box select label is not associated (no <label for="...mb_gbqf_color">)' ;;
 esac
 
+# The ACF field renders as a RADIO GROUP, which has no single control to point
+# at — its name comes from role="group" + aria-labelledby instead. Different
+# mechanism, different code path; a fixture rendering only selects never
+# measures this one.
 case "${BASE}" in
-    *'<label for="gbqf_acf_gbqf_size"'*) ok 'ACF select has an associated label' ;;
-    *) bad 'ACF select label is not associated (no <label for="gbqf_acf_gbqf_size">)' ;;
+    *'role="group" aria-labelledby="'*'acf_gbqf_size_label"'*) ok 'ACF radio group is a named group (role=group + aria-labelledby)' ;;
+    *) bad 'ACF radio group has no accessible name (no role="group" aria-labelledby="...acf_gbqf_size_label")' ;;
 esac
-
-# The `for` must point at something. An id that no element carries is a dangling
-# reference — assistive tech follows it to nothing, which is worse than a bare
-# label, and it is exactly what the Meta Box radio branch used to emit.
-for pair in 'gbqf_mb_gbqf_color:Meta Box' 'gbqf_acf_gbqf_size:ACF'; do
-    ctl_id="${pair%%:*}"; ctl_name="${pair##*:}"
-    case "${BASE}" in
-        *"id=\"${ctl_id}\""*) ok "${ctl_name} label's for= resolves to a real control" ;;
-        *) bad "${ctl_name} label points at id='${ctl_id}', but no element carries it (dangling reference)" ;;
-    esac
-done
 
 bare=$(printf '%s' "${BASE}" | grep -o '<label>' | wc -l | tr -d ' ' || true)
 if [ "${bare}" = "0" ]; then
     ok 'no bare <label> tags in the rendered form'
 else
-    bad "${bare} bare <label> tag(s) with no for= attribute — unassociated labels"
-    note 'both fixture fields are selects, so every field label here should carry a for='
+    bad "${bare} bare <label> tag(s) — neither for= nor an id an aria-labelledby points at"
+fi
+
+# EVERY id-reference on the page must resolve to EXACTLY ONE element.
+#
+# Not "at least one": a duplicate id is why this check exists. Control ids used
+# to be fixed strings, so a page with three filter blocks emitted three elements
+# with id="gbqf_search_input". A `for` then resolves to whichever comes first,
+# which may be a control in a different filter form — the label is present,
+# looks correct in the markup, and names the wrong thing. Asserting presence
+# alone passed happily throughout that.
+#
+# Checks both reference kinds, since the two label mechanisms above use one
+# each: `for` for single controls, `aria-labelledby` for groups.
+refs=$(printf '%s' "${BASE}" \
+    | grep -o -E '(for|aria-labelledby)="gbqf[0-9]+_[^"]*"' \
+    | sed -E 's/^[^"]*"//; s/"$//' | sort -u || true)
+
+if [ -z "${refs}" ]; then
+    bad 'no gbqf control id references found at all — the form did not render as expected'
+else
+    dangling=0
+    duplicated=0
+    for ref in ${refs}; do
+        n=$(printf '%s' "${BASE}" | grep -o "id=\"${ref}\"" | wc -l | tr -d ' ' || true)
+        if [ "${n}" = "0" ]; then
+            dangling=$((dangling+1))
+            note "dangling: nothing carries id=\"${ref}\""
+        elif [ "${n}" != "1" ]; then
+            duplicated=$((duplicated+1))
+            note "duplicate: ${n} elements carry id=\"${ref}\""
+        fi
+    done
+
+    ref_count=$(printf '%s\n' "${refs}" | wc -l | tr -d ' ')
+
+    [ "${dangling}" = "0" ] \
+        && ok "every label reference resolves to a real control (${ref_count} checked)" \
+        || bad "${dangling} label reference(s) point at no element"
+
+    [ "${duplicated}" = "0" ] \
+        && ok "every referenced control id is unique on the page (${ref_count} checked)" \
+        || bad "${duplicated} control id(s) appear more than once — labels resolve ambiguously"
 fi
 
 # ---------------------------------------------------------------------------
@@ -523,6 +563,51 @@ fi
 # Nothing else may move on either request either.
 expect "${OWN_A}" "${M_CONTROL}" 4 'control loop untouched by an unowned-field request'
 expect "${OWN_B}" "${M_CONTROL}" 4 'control loop untouched by an unowned-field request (ACF side)'
+
+# --- the arbitrary-key oracle -----------------------------------------------
+#
+# The two requests above use the OTHER block's declared field, so each lands on
+# a block whose relevant ownership list is EMPTY. That only exercises the
+# "declared nothing" path.
+#
+# This one is the case the security finding actually names, and it is a
+# different code path: the scoped block declares a NON-EMPTY Meta Box list
+# (gbqf_color), so the request gets past the empty-list early return and has to
+# be rejected by the in_array() membership test instead.
+#
+# The key is `_gbqf_undeclared` — protected, registered by no integration,
+# declared by no block, present on exactly one post. Before the fix this
+# returned 1 row for the correct value and 0 for a wrong one, which is what made
+# it a value oracle rather than merely untidy: the row count answers the
+# question "does any post have this meta value?" for a visitor who was never
+# meant to be able to ask.
+#
+# Both must be 4. Testing BOTH values matters — asserting only the correct one
+# cannot tell "the key was ignored" (4) from "the key filtered and everything
+# matched", and asserting only the wrong one cannot tell it from an empty result
+# set for unrelated reasons.
+echo ""
+echo "   arbitrary undeclared protected key (the oracle this fix closed)"
+
+ORACLE_HIT=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5B_gbqf_undeclared%5D=zulu' || true)
+[ -n "${ORACLE_HIT}" ] || err 'empty response for the oracle (correct value) request'
+
+ORACLE_MISS=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5B_gbqf_undeclared%5D=yankee' || true)
+[ -n "${ORACLE_MISS}" ] || err 'empty response for the oracle (wrong value) request'
+
+n_hit=$(rows "${ORACLE_HIT}" "${M_SCOPED}")
+n_miss=$(rows "${ORACLE_MISS}" "${M_SCOPED}")
+
+if [ "${n_hit}" = "4" ] && [ "${n_miss}" = "4" ]; then
+    ok 'an undeclared protected meta key is ignored, right or wrong value (4/4 rows)'
+elif [ "${n_hit}" != "${n_miss}" ]; then
+    bad "VALUE ORACLE: correct value gave ${n_hit} rows, wrong value gave ${n_miss}"
+    note 'the row count discloses whether a post carries this meta value, to a'
+    note 'visitor who cannot read the meta. Security invariant 1 in CONTEXT.md.'
+    note 'the membership test in get_meta_filters() is not rejecting undeclared keys.'
+else
+    bad "undeclared key changed the result set (${n_hit} rows for both values, expected 4)"
+fi
 
 echo ""
 if [ "${FAIL}" -gt 0 ]; then

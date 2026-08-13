@@ -100,7 +100,20 @@ return array(
 	 */
 	'posts' => array(
 		array( 'slug' => 'gbqf-alpha',   'title' => 'GBQF Alpha',   'meta' => array( 'gbqf_color' => 'red',  'gbqf_size' => 'small' ) ),
-		array( 'slug' => 'gbqf-bravo',   'title' => 'GBQF Bravo',   'meta' => array( 'gbqf_color' => 'blue', 'gbqf_size' => 'large' ) ),
+		/*
+		 * v3.1. `_gbqf_undeclared` is the probe for §9's hardest case, and it
+		 * is deliberately unlike the other two: no filter block declares it, no
+		 * integration registers it as a field, and its `_` prefix makes it a
+		 * PROTECTED key — the class WordPress hides from the REST API precisely
+		 * because it is not meant to be public.
+		 *
+		 * It exists on exactly one post, so a filter that honoured it would
+		 * return 1 row for the correct value and 0 for a wrong one. That
+		 * difference is the whole finding: it is a value oracle, letting an
+		 * unauthenticated visitor confirm or deny arbitrary meta values by
+		 * watching the row count. Both must return 4.
+		 */
+		array( 'slug' => 'gbqf-bravo',   'title' => 'GBQF Bravo',   'meta' => array( 'gbqf_color' => 'blue', 'gbqf_size' => 'large', '_gbqf_undeclared' => 'zulu' ) ),
 		array( 'slug' => 'gbqf-charlie', 'title' => 'GBQF Charlie', 'meta' => array( 'gbqf_color' => 'red',  'gbqf_size' => 'large' ) ),
 		array( 'slug' => 'gbqf-delta',   'title' => 'GBQF Delta',   'meta' => array( 'gbqf_color' => 'blue', 'gbqf_size' => 'small' ) ),
 	),
@@ -110,14 +123,16 @@ return array(
 	 * `rwmb_meta_boxes`, ACF via `acf_add_local_field_group()` — from this one
 	 * declaration, so the registered field and the seeded values cannot drift.
 	 *
-	 * Both are `select` with explicit choices, and both filter blocks leave
-	 * controlType at 'auto'. That resolves to a single <select> control, which
-	 * matters for the accessibility assertions: a <select> has one id for a
-	 * <label for> to point at. Radio/checkbox control types render a GROUP of
-	 * inputs with no single labellable control, which is a different (and
-	 * currently unfixed) labelling problem — see
-	 * .scratch/targeting-module/issues/03-group-control-labelling.md. Keeping
-	 * this fixture on selects keeps section 6 measuring one thing.
+	 * Both are `select` field types with explicit choices, but the two filter
+	 * blocks render them with DIFFERENT control shapes on purpose (see
+	 * `filter_blocks` below): the Meta Box field as a single <select>, the ACF
+	 * field as a radio group.
+	 *
+	 * That split is what makes §6 meaningful. The two shapes get their
+	 * accessible name by different mechanisms — `<label for>` pointing at the
+	 * control's id, versus `role="group"` + `aria-labelledby` pointing back at
+	 * the label — so a fixture rendering only one of them leaves the other's
+	 * code path unmeasured.
 	 */
 	'fields' => array(
 		'mb' => array(
@@ -237,8 +252,21 @@ return array(
 		// page — so it can only ever be matched by the class rule.
 		// v3. Owns the ACF field, and no Meta Box field.
 		array(
-			'target_id' => 'gbqf-alias',
-			'acf_field' => 'gbqf_size',
+			'target_id'   => 'gbqf-alias',
+			'acf_field'   => 'gbqf_size',
+			// v3.1. RADIO, not a select — deliberately the other control shape.
+			//
+			// A select is a single control with an id, so its label carries a
+			// `for`. A radio set is a GROUP of inputs with no single id, so its
+			// name has to come from `role="group"` + `aria-labelledby`. Those
+			// are two different code paths and two different ways to be wrong,
+			// and pinning both fields to select left the group path unrendered
+			// — §6 then reported "no bare labels" about a page that never
+			// exercised the branch which emits them.
+			//
+			// The filter still works identically: a radio set posts the same
+			// single parameter name, so §8's row count is unaffected.
+			'acf_control' => 'radio',
 		),
 	),
 );

@@ -16,12 +16,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   case: on any loop such a block legitimately claimed, `gbqf[<target>][meta][<any-key>]=<value>`
   filtered the results — including protected `_`-prefixed keys the site never exposed.
 
-  Measured on a test site with an undeclared protected key: a correct value returned 1 row and a
-  wrong value 0, making it a value oracle over arbitrary post meta, reachable unauthenticated. That
-  is security invariant 1 in [CONTEXT.md](CONTEXT.md) — "front-end filtering must not expose anything
-  a user couldn't see without the filter".
+  With an undeclared, protected key a correct value returned 1 row and a wrong value 0 — a value
+  oracle over arbitrary post meta, reachable unauthenticated, letting a visitor confirm or deny meta
+  values by watching the row count. That is security invariant 1 in [CONTEXT.md](CONTEXT.md) —
+  "front-end filtering must not expose anything a user couldn't see without the filter". The
+  blueprint asserts both values now, so it is a regression test rather than a one-off measurement.
 
   An empty ownership list now means **owns nothing**. A block filters only on fields it declares.
+
+  The change bites **per list**, not only on blocks that declare nothing at all: a block declaring
+  only ACF fields also had an empty Meta Box list, so every URL meta key additionally ran through
+  `get_meta_filters()` and could emit a second, duplicate meta clause. Such a block's behaviour
+  changes too.
 
 - **A Query Loop that no filter block targets could be filtered from the URL.** Any loop carrying a
   class matching `gbqf-target-*` passed the gate without any check that a filter block had
@@ -41,6 +47,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   scope values are now treated as `targeted` (fail closed).
 
 ### Fixed
+- **Custom-field filter labels were not associated with their control** ([ADR-0003](docs/adr/0003-accessibility-target-current-wcag-aa.md)).
+  The ACF branch emitted a bare `<label>` in every case, so its select and text controls had no
+  programmatic association at all; the Meta Box branch emitted `for="gbqf_mb_{id}"` over its radio
+  *group*, where no element carries that id — a dangling reference. Both now emit `for` only where a
+  single control below actually sets the id.
+
+  Group controls (Meta Box radio; ACF radio, checkboxes, true/false) now get their name from
+  `role="group"` + `aria-labelledby` pointing back at the field label, since a group has no single
+  control for a `for` to reference.
+
+- **Every control on a page with more than one filter block shared its id with the others.** Control
+  ids were fixed strings (`gbqf_search_input`, `gbqf_cat_12`, `gbqf_mb_colour`), unique only while a
+  page carried exactly one filter block. Two blocks — the ordinary case for a page with two Query
+  Loops — emitted duplicate ids, and a duplicate id makes every `for` on the page resolve to the
+  first match, so a label could name a control inside a different filter form. Ids now carry a
+  per-block prefix. They are not documented, styled, or referenced by JS, so nothing depends on the
+  old values.
+
 - **Class-based scoped targeting never filtered anything.** A Query Loop claimed by *class* rather
   than by HTML ID received no filter state: the `Params` scope was taken from the loop's own id
   instead of the matched target key, so the filter form wrote `gbqf[<target>][…]` while the query
@@ -68,7 +92,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   Every defect in this release was **committed as a failing test before being fixed**, so "this was
   broken and now is not" is a diff between two runs rather than an assertion. Blueprint v2 reported
   2 failed / 23 passed against 0.3.0; v3 reported 4 failed / 42 passed before the field-ownership
-  and label fixes. Against this release, 46 passed.
+  and label fixes. Against this release, 47 passed.
 
   Blueprint **v3** adds custom-field coverage: a Meta Box field and an ACF field registered from one
   manifest declaration (via `schema.php` and a mu-plugin stub, because the definitions must exist at
@@ -80,16 +104,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   HTTP) because wp-cli is structurally blind here: registration happens in the filter block's
   `render_callback` and the targeting decision inside `generateblocks_query_wp_query_args` during a
   render. Under wp-cli neither fires, so every "this loop was not filtered" check passes vacuously.
-
-### Fixed (accessibility)
-- **Custom-field filter labels were not associated with their control** ([ADR-0003](docs/adr/0003-accessibility-target-current-wcag-aa.md)).
-  The ACF branch emitted a bare `<label>` in every case, so its select and text controls had no
-  programmatic association at all; the Meta Box branch emitted `for="gbqf_mb_{id}"` over its radio
-  *group*, where no element carries that id — a dangling reference. Both now emit `for` only where a
-  single control below actually sets the id.
-
-  Group controls (Meta Box radio; ACF radio, checkboxes, true/false) still lack an accessible group
-  name and need `fieldset`/`legend` or `role="group"` — tracked separately, not fixed here.
 
 ### Changed
 - Flat (`gbqf_*`) URL parameters are reachable **only** under the legacy `all` scope, or when a

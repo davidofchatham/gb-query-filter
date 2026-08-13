@@ -60,6 +60,7 @@ a *distinct* count:
 | `search=Bravo` | 1 |
 | `gbqf_color=red` (Meta Box) | 2 |
 | `gbqf_size=large` (ACF) | 2 |
+| `_gbqf_undeclared=zulu` (undeclared) | 4 — ignored |
 
 2 is deliberately neither 1 nor 4: a field filter that silently fell back to "no
 filter" reads as 4, and one that collapsed onto the search reads as 1. The two
@@ -72,7 +73,7 @@ block to filter on precisely the field the *other* block owns.
 
 ## Current result
 
-**46 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro
+**47 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro
 6.8.7, scope `targeted`), blueprint v3, against 0.4.0.
 
 ## What it caught
@@ -106,9 +107,15 @@ protected `_`-prefixed key: correct value → 1 row, wrong value → 0 — a val
 oracle over arbitrary post meta, unauthenticated. Now: owns nothing, filters
 nothing.
 
-**§6 — custom-field labels were not associated.** Unreachable before v3, because
-no fixture rendered either branch; the check reported SKIPPED rather than passed
-and said so. See [ADR-0003](../../../docs/adr/0003-accessibility-target-current-wcag-aa.md).
+**§6 — custom-field labels were not associated, and control ids collided.**
+Unreachable before v3, because no fixture rendered either branch; the check
+reported SKIPPED rather than passed and said so. Once reachable it found two
+things: the ACF label was bare in every case, and — separately — all three
+filter blocks emitted `id="gbqf_search_input"`, so every `for` on the page
+resolved to whichever control came first. §6 now asserts that each label
+reference resolves to **exactly one** element, which is the assertion a
+presence-only check could never make. See
+[ADR-0003](../../../docs/adr/0003-accessibility-target-current-wcag-aa.md).
 
 §4 and §5 had one root cause: the targeting decision was derived in more than
 one place. `Targeting::match()` is now the only place it is derived. §9 is the
@@ -142,11 +149,15 @@ a different uid than the docroot owner). Installing it by hand is the normal fix
 
 ## Known gaps
 
-- **Only `select` control types.** Both v3 fields are selects on purpose, so §6
-  measures one thing. Radio and checkbox control types render a *group* of
-  inputs with no single labellable control — a separate, still-unfixed problem
-  (`.scratch/targeting-module/issues/03-group-control-labelling.md`). Nothing
-  here reaches those branches.
+- **Two control shapes, not all of them.** The Meta Box field renders as a
+  `select` and the ACF field as a radio group, so both naming mechanisms are
+  exercised (`<label for>` and `role="group"` + `aria-labelledby`). Meta Box
+  `text`, ACF `checkboxes` / `true_false` / `text` and the no-choices fallback
+  are still unrendered by any fixture.
+- **No coverage of the category / tag / taxonomy controls' labelling.** They are
+  disabled here, and they use a `<span>` rather than a `<label>` — an unfixed
+  gap noted in
+  `.scratch/targeting-module/issues/03-group-control-labelling.md`.
 - **No taxonomy coverage.** The category, tag and extra-taxonomy controls are
   disabled on every fixture block: they would render term checkboxes for every
   term on the site, which is noise in a body the harness counts strings in.

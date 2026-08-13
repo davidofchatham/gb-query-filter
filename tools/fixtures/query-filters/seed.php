@@ -298,7 +298,10 @@ $filter_markup = function ( array $spec ) {
 	if ( ! empty( $spec['acf_field'] ) ) {
 		$attrs['enableAcfFilter'] = true;
 		$attrs['acfFields']       = array(
-			array( 'id' => $spec['acf_field'], 'controlType' => 'auto' ),
+			array(
+				'id'          => $spec['acf_field'],
+				'controlType' => ! empty( $spec['acf_control'] ) ? $spec['acf_control'] : 'auto',
+			),
 		);
 	}
 
