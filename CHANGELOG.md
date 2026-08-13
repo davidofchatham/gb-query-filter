@@ -6,7 +6,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.4.0] — Unreleased
+## [0.4.0] — 2026-08-13
 
 ### Security
 - **Any post meta key was filterable through a filter block that declared no fields.** A block's
