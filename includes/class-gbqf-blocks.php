@@ -791,13 +791,24 @@ class Blocks {
                 $options     = $field_data['options'];
                 $selected    = $field_data['selected'];
 
+                $control_type = ! empty( $field_data['control_type'] ) ? $field_data['control_type'] : 'auto';
+
+                // A `for` is only honest when a single control below actually
+                // carries that id. The radio branch renders a GROUP of inputs
+                // and gives none of them `gbqf_mb_{id}`, so a `for` there is a
+                // dangling reference — worse than no association, because
+                // assistive tech follows it to nothing. Emit it only for the
+                // select / text branches, which do set the id.
+                $labels_single_control = ! ( $has_options && ! empty( $options ) && 'radio' === $control_type );
+
                 $html .= '<div class="gbqf-filter-field gbqf-filter-metabox gbqf-filter-metabox-' . esc_attr( $field_id ) . '">';
-                $html .= '<label for="gbqf_mb_' . esc_attr( $field_id ) . '">';
+                $html .= $labels_single_control
+                    ? '<label for="gbqf_mb_' . esc_attr( $field_id ) . '">'
+                    : '<label>';
                 $html .= esc_html( $label );
                 $html .= '</label>';
 
                 if ( $has_options && ! empty( $options ) ) {
-                    $control_type = ! empty( $field_data['control_type'] ) ? $field_data['control_type'] : 'auto';
 
                     if ( 'radio' === $control_type ) {
                         $html .= '<div class="gbqf-filter-options">';
@@ -851,8 +862,20 @@ class Blocks {
                 $field_type   = $field_data['field_type'];
                 $is_multi     = $field_data['is_multi'];
 
+                // Same rule as the Meta Box branch above: associate the label
+                // only where a single control below carries `gbqf_acf_{name}`.
+                // true_false, checkboxes and radio all render GROUPS of inputs
+                // with no such id; select, text and the no-choices fallback set
+                // it. This label was previously bare in every case, so even the
+                // select and text controls — the ones a `for` fits exactly —
+                // had no programmatic association at all (ADR-0003).
+                $labels_single_control = ( 'true_false' !== $field_type )
+                    && ! ( $has_choices && ! empty( $choices ) && in_array( $control_type, [ 'checkboxes', 'radio' ], true ) );
+
                 $html .= '<div class="gbqf-filter-field gbqf-filter-acf gbqf-filter-acf-' . esc_attr( $field_name ) . '">';
-                $html .= '<label>';
+                $html .= $labels_single_control
+                    ? '<label for="gbqf_acf_' . esc_attr( $field_name ) . '">'
+                    : '<label>';
                 $html .= esc_html( $label );
                 $html .= '</label>';
 
