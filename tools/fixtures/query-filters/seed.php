@@ -30,6 +30,10 @@ $log      = function ( $msg ) {
 	WP_CLI::log( '[query-filters] ' . $msg );
 };
 
+// v3. Registers the Meta Box and ACF fields. Required BEFORE the preconditions
+// below, which assert the registration actually took.
+require_once __DIR__ . '/schema.php';
+
 // ---------------------------------------------------------------------------
 // 0. Environment preconditions.
 //
@@ -67,6 +71,67 @@ if ( 'targeted' !== $scope ) {
 		. 'under \'all\' the control loop filters too and the results mean something else entirely.',
 		$scope
 	) );
+}
+
+// v3 preconditions. Both integrations must be present AND enabled in GBQF's
+// own settings, and they are separate failure modes:
+//
+//   plugin missing  -> the field never registers, the control renders empty
+//   GBQF toggle off -> Filters::get_meta_filters() returns [] before it looks
+//                      at anything, so the field filter silently does nothing
+//
+// Either one turns sections 7-9 into assertions that "the unowned field did not
+// filter" — which passes, loudly and wrongly, because NO field filtered.
+if ( ! function_exists( 'rwmb_get_registry' ) ) {
+	WP_CLI::error( 'Meta Box is not active (rwmb_get_registry missing). Sections 7 and 9 of render-surface.sh would pass vacuously.' );
+}
+
+if ( ! function_exists( 'acf_get_field' ) ) {
+	WP_CLI::error( 'ACF is not active (acf_get_field missing). Sections 8 and 9 of render-surface.sh would pass vacuously.' );
+}
+
+if ( ! \GBQF\Settings::is_metabox_enabled() ) {
+	WP_CLI::error( 'GBQF Meta Box integration is disabled (GenerateBlocks -> Query Filters). Meta Box field filters would no-op.' );
+}
+
+if ( ! \GBQF\Settings::is_acf_enabled() ) {
+	WP_CLI::error( 'GBQF ACF integration is disabled (GenerateBlocks -> Query Filters). ACF field filters would no-op.' );
+}
+
+// ---------------------------------------------------------------------------
+// 0b. Mu-plugin loader stub (v3; path computed at seed time, not committed).
+//
+// LOAD-BEARING for the HTTP harness, in a way that fails quietly without it.
+// The field definitions in schema.php must be registered on the request that
+// RENDERS the page — that is when GBQF reads the Meta Box and ACF registries to
+// build its controls, and when the meta_query is assembled. Without the stub the
+// fields exist only inside the wp-cli process: verify.php passes, the page
+// renders, and the field controls come back label-less and option-less while
+// sections 7-9 measure nothing.
+//
+// So a failed write is reported, never logged as success. wp-cli often runs as a
+// different uid than the docroot owner; installing the stub by hand from the
+// host is the normal fix, not an error in the blueprint.
+// ---------------------------------------------------------------------------
+$mu_dir = defined( 'WPMU_PLUGIN_DIR' ) ? WPMU_PLUGIN_DIR : WP_CONTENT_DIR . '/mu-plugins';
+if ( ! is_dir( $mu_dir ) ) {
+	mkdir( $mu_dir, 0755, true );
+}
+
+$schema_path = __DIR__ . '/schema.php';
+$stub_path   = $mu_dir . '/gbqf-fixture-query-filters.php';
+$stub        = "<?php\n// Auto-installed by query-filters seed.php — includes the blueprint schema off the plugin mount.\n"
+	. "if ( file_exists( '" . addslashes( $schema_path ) . "' ) ) {\n"
+	. "\trequire_once '" . addslashes( $schema_path ) . "';\n"
+	. "}\n";
+
+if ( false !== @file_put_contents( $stub_path, $stub ) ) {
+	$log( 'mu-plugin loader stub installed -> ' . $stub_path );
+} else {
+	WP_CLI::warning(
+		"could not write {$stub_path} (uid mismatch?). Seeding continues — verify.php is unaffected — "
+		. "but the Meta Box and ACF fields will be UNREGISTERED over HTTP until this file exists:\n" . $stub
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +184,20 @@ foreach ( $manifest['posts'] as $spec ) {
 
 	// Replace, not append — re-running must not accumulate categories.
 	wp_set_post_terms( (int) $post_id, array( $cat_id ), 'category', false );
-	$log( "post {$spec['slug']} -> #{$post_id}" );
+
+	// v3. Field values, written as plain post meta under the field's own name.
+	//
+	// update_post_meta, not update_field(): both Meta Box and ACF store a
+	// single-value select exactly this way, and it is what the generated
+	// meta_query compares against. Going through ACF's writer would additionally
+	// store the `_gbqf_size` key-reference row, which nothing under test reads —
+	// GBQF queries the field NAME. Writing the row the query actually reads keeps
+	// the fixture honest about what it is proving.
+	foreach ( $spec['meta'] as $meta_key => $meta_value ) {
+		update_post_meta( (int) $post_id, $meta_key, $meta_value );
+	}
+
+	$log( "post {$spec['slug']} -> #{$post_id} (" . http_build_query( $spec['meta'], '', ', ' ) . ')' );
 }
 
 // ---------------------------------------------------------------------------
@@ -193,14 +271,38 @@ $loop_markup = function ( $id, $class, $marker, $slugs, $uid ) {
  * category on the site, which is noise in the response body the harness has to
  * count strings in. Search alone exercises the targeting rule.
  */
-$filter_markup = function ( $target_id ) {
-	return '<!-- wp:gbqf/query-filter ' . wp_json_encode( array(
-		'targetId'         => $target_id,
+$filter_markup = function ( array $spec ) {
+	$attrs = array(
+		'targetId'         => $spec['target_id'],
 		'enableSearch'     => true,
 		'enableCategories' => false,
 		'enableTags'       => false,
 		'enableAjax'       => false,
-	) ) . ' /-->';
+	);
+
+	// v3. Field ownership. Set only where the manifest declares it — a block
+	// with no entry owns NO fields, which is the other half of every ownership
+	// assertion (the unowned key must be ignored, not merely deprioritised).
+	//
+	// The repeater-style `metaBoxFields`/`acfFields` attributes are used rather
+	// than the legacy CSV ones so `controlType` is explicit. 'auto' + a field
+	// with options resolves to a single <select>, which is the control shape
+	// section 6 can assert a <label for> against.
+	if ( ! empty( $spec['mb_field'] ) ) {
+		$attrs['enableMetaBoxFilter'] = true;
+		$attrs['metaBoxFields']       = array(
+			array( 'id' => $spec['mb_field'], 'controlType' => 'auto' ),
+		);
+	}
+
+	if ( ! empty( $spec['acf_field'] ) ) {
+		$attrs['enableAcfFilter'] = true;
+		$attrs['acfFields']       = array(
+			array( 'id' => $spec['acf_field'], 'controlType' => 'auto' ),
+		);
+	}
+
+	return '<!-- wp:gbqf/query-filter ' . wp_json_encode( $attrs ) . ' /-->';
 };
 
 $loops = $manifest['loops'];
@@ -210,18 +312,18 @@ $content = implode( "\n\n", array(
 	$loop_markup( $loops['control']['id'], $loops['control']['class'], $loops['control']['marker'], $post_slugs, 'gbqfctl0' ),
 
 	'<!-- wp:heading --><h2 class="wp-block-heading">2. unscoped — filter block with targetId \'\'</h2><!-- /wp:heading -->',
-	$filter_markup( $manifest['filter_blocks'][0]['target_id'] ),
+	$filter_markup( $manifest['filter_blocks'][0] ),
 	$loop_markup( $loops['unscoped']['id'], $loops['unscoped']['class'], $loops['unscoped']['marker'], $post_slugs, 'gbqfuns0' ),
 
 	'<!-- wp:heading --><h2 class="wp-block-heading">3. scoped — filter block targeting this loop by id</h2><!-- /wp:heading -->',
-	$filter_markup( $manifest['filter_blocks'][1]['target_id'] ),
+	$filter_markup( $manifest['filter_blocks'][1] ),
 	$loop_markup( $loops['scoped']['id'], $loops['scoped']['class'], $loops['scoped']['marker'], $post_slugs, 'gbqfscp0' ),
 
 	'<!-- wp:heading --><h2 class="wp-block-heading">4. legacy — gbqf-target-* class, no filter block names it</h2><!-- /wp:heading -->',
 	$loop_markup( $loops['legacy']['id'], $loops['legacy']['class'], $loops['legacy']['marker'], $post_slugs, 'gbqflgc0' ),
 
 	'<!-- wp:heading --><h2 class="wp-block-heading">5. classmatch — filter block targets a CLASS, loop id differs</h2><!-- /wp:heading -->',
-	$filter_markup( $manifest['filter_blocks'][2]['target_id'] ),
+	$filter_markup( $manifest['filter_blocks'][2] ),
 	$loop_markup( $loops['classmatch']['id'], $loops['classmatch']['class'], $loops['classmatch']['marker'], $post_slugs, 'gbqfcls0' ),
 ) );
 

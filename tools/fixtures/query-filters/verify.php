@@ -132,6 +132,124 @@ if ( ! $pages ) {
 		: $bad( 'unscoped filter block missing' );
 }
 
+// --- v3: custom fields ------------------------------------------------------
+//
+// Three separate things can be missing, and they fail the HTTP harness in ways
+// that look nothing like each other:
+//
+//   values not seeded   -> field filters return 0 rows, not 2
+//   field not REGISTERED-> control renders without options; the filter still
+//                          works, so only section 6 notices
+//   ownership not on the-> the owned-field sections report 4 (skipped as
+//   block attributes       unowned) while section 9 passes for the wrong reason
+//
+// The third is the nastiest: section 9 asserts a field does NOT filter, so a
+// fixture that declared no ownership at all makes it pass trivially. Assert the
+// ownership is present here, where it is a fixture fact and cheap to read.
+$fields = $manifest['fields'];
+
+foreach ( $manifest['posts'] as $spec ) {
+	$ids = get_posts( array(
+		'post_type'      => 'post',
+		'name'           => $spec['slug'],
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+	) );
+	if ( ! $ids ) {
+		continue; // already reported above
+	}
+
+	foreach ( $spec['meta'] as $meta_key => $expected ) {
+		$actual = get_post_meta( (int) $ids[0], $meta_key, true );
+		$actual === $expected
+			? $ok( "post {$spec['slug']} has {$meta_key}={$expected}" )
+			: $bad( "post {$spec['slug']} {$meta_key} is '{$actual}', expected '{$expected}'" );
+	}
+}
+
+// Row counts, computed from the manifest rather than hardcoded — the harness
+// asserts 2 rows for each field filter, and that number is only correct while
+// the values split the posts evenly. A manifest edit that broke the split would
+// otherwise surface as a mysterious render-surface.sh failure.
+foreach ( array( 'gbqf_color' => 'red', 'gbqf_size' => 'large' ) as $split_key => $split_value ) {
+	$matching = 0;
+	foreach ( $manifest['posts'] as $spec ) {
+		if ( isset( $spec['meta'][ $split_key ] ) && $spec['meta'][ $split_key ] === $split_value ) {
+			$matching++;
+		}
+	}
+	2 === $matching
+		? $ok( "{$split_key}={$split_value} selects exactly 2 of 4 posts (the count sections 7-9 assert)" )
+		: $bad( "{$split_key}={$split_value} selects {$matching} posts, but the harness asserts 2" );
+}
+
+// Registration, not just values. Both are read at RENDER time off the
+// mu-plugin stub; if the stub is missing this passes under wp-cli (seed.php
+// required schema.php directly) — so it is a necessary check, not a sufficient
+// one. render-surface.sh section 6 is what proves the HTTP request saw them.
+if ( function_exists( 'rwmb_get_registry' ) ) {
+	$mb_field = rwmb_get_registry( 'field' )->get( $fields['mb']['id'], 'post' );
+	! empty( $mb_field )
+		? $ok( "Meta Box field {$fields['mb']['id']} is registered" )
+		: $bad( "Meta Box field {$fields['mb']['id']} is NOT registered — its control renders without options" );
+} else {
+	$bad( 'Meta Box is not active — sections 7 and 9 would pass vacuously' );
+}
+
+if ( function_exists( 'acf_get_field' ) ) {
+	$acf_field = acf_get_field( $fields['acf']['name'] );
+	! empty( $acf_field )
+		? $ok( "ACF field {$fields['acf']['name']} is registered" )
+		: $bad( "ACF field {$fields['acf']['name']} is NOT registered — its control renders without choices" );
+} else {
+	$bad( 'ACF is not active — sections 8 and 9 would pass vacuously' );
+}
+
+// GBQF's own toggles. Either one off silently disables a whole integration
+// branch, which makes every "unowned field did not filter" assertion pass.
+\GBQF\Settings::is_metabox_enabled()
+	? $ok( 'GBQF Meta Box integration enabled' )
+	: $bad( 'GBQF Meta Box integration DISABLED — Meta Box field filters no-op, section 9 passes vacuously' );
+
+\GBQF\Settings::is_acf_enabled()
+	? $ok( 'GBQF ACF integration enabled' )
+	: $bad( 'GBQF ACF integration DISABLED — ACF field filters no-op, section 9 passes vacuously' );
+
+// Ownership, as authored into the page. Read from the page content for the same
+// reason the targeting assertions above are: it is what the block will actually
+// be rendered with.
+$page_ids = get_posts( array(
+	'post_type'      => 'page',
+	'name'           => $manifest['page']['slug'],
+	'post_status'    => 'publish',
+	'posts_per_page' => 1,
+	'fields'         => 'ids',
+) );
+
+if ( $page_ids ) {
+	$page_content = get_post_field( 'post_content', $page_ids[0] );
+
+	false !== strpos( $page_content, '"id":"' . $fields['mb']['id'] . '"' )
+		? $ok( "a filter block declares ownership of {$fields['mb']['id']}" )
+		: $bad( "no filter block declares {$fields['mb']['id']} — section 7 would report 4 rows and section 9 would pass trivially" );
+
+	false !== strpos( $page_content, '"id":"' . $fields['acf']['name'] . '"' )
+		? $ok( "a filter block declares ownership of {$fields['acf']['name']}" )
+		: $bad( "no filter block declares {$fields['acf']['name']} — section 8 would report 4 rows and section 9 would pass trivially" );
+
+	// The DISJOINTNESS is the test. If one block owned both fields, section 9
+	// would be asserting that an OWNED field does not filter, and it would fail
+	// — but a fixture that gave both fields to both blocks would instead make
+	// section 9 unfalsifiable in the other direction.
+	$mb_owner_count  = substr_count( $page_content, '"enableMetaBoxFilter":true' );
+	$acf_owner_count = substr_count( $page_content, '"enableAcfFilter":true' );
+
+	1 === $mb_owner_count && 1 === $acf_owner_count
+		? $ok( 'exactly one block owns Meta Box fields and one owns ACF fields (ownership is disjoint)' )
+		: $bad( "ownership is not disjoint ({$mb_owner_count} MB owners, {$acf_owner_count} ACF owners) — section 9 cannot distinguish owned from unowned" );
+}
+
 // --- environment ------------------------------------------------------------
 class_exists( '\GBQF\Filters' )
 	? $ok( 'gb-query-filter loaded' )

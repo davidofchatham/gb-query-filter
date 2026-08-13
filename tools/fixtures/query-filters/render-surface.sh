@@ -28,6 +28,13 @@
 # There is no third outcome, which is what makes an unexpected count worth
 # stopping on rather than interpreting.
 #
+# BLUEPRINT v3 adds a second axis: field OWNERSHIP (sections 7-9). A Target
+# carries not just which loop a block may touch but which FIELDS that block
+# filters on, and the two custom fields split the posts 2/2 — so a field filter
+# reads as 2 rows, distinguishable from both 4 (nothing applied) and 1 (the
+# search). Sections 7 and 8 assert the owned field filters; section 9 asserts
+# the unowned one does not, on a request that targeting cannot decline.
+#
 # CHARACTERIZATION, NOT SPECIFICATION. Sections 2 and 4 assert what the code
 # currently does, and say so in their labels — they exist because
 # `should_apply_to_attributes()` and `get_matched_target()` walk the same match
@@ -351,29 +358,171 @@ esac
 
 # A <label> with no `for` and no wrapped control labels nothing.
 #
-# SCOPE, and it matters: the bare-<label> defect at class-gbqf-blocks.php:851 is
-# in the ACF field branch, and this blueprint's filter blocks enable search
-# only. So a zero count here is VACUOUS — it means the branch never rendered,
-# not that it is sound. Say so rather than bank a pass that was never at risk.
+# Through v2 this check was VACUOUS and said so: the defect is in the custom-field
+# branches, and v1/v2 filter blocks enabled search only, so the branch never
+# rendered and a zero count meant "not reached", not "sound". v3 seeds a Meta Box
+# field and an ACF field, both as `select` — a single control with an id — so the
+# branch is now genuinely exercised.
+#
+# STILL SCOPED, in a different place. v3 pins both fields to `select` on purpose
+# (manifest.php `fields`). Radio/checkbox control types render a GROUP of inputs
+# with no single labellable control, which is an unfixed and separate problem —
+# see .scratch/targeting-module/issues/03-group-control-labelling.md. Nothing
+# below reaches those branches, and that is deliberate, not an oversight.
 # (Numbered 5 through blueprint v1; renumbered to 6 in v2, when the class-match
 # section took 5.)
-# Covering it needs an ACF-enabled filter block, which needs a seeded ACF field
-# group; that is a blueprint v2 concern.
-bare=$(printf '%s' "${BASE}" | grep -o '<label>' | wc -l | tr -d ' ' || true)
 case "${BASE}" in
-    *'gbqf-filter-acf'*)
-        if [ "${bare}" = "0" ]; then
-            ok 'no bare <label> tags in the rendered form (ACF branch present)'
-        else
-            bad "${bare} bare <label> tag(s) with no for= attribute — unassociated labels"
-            note 'see includes/class-gbqf-blocks.php:851 (ACF field group)'
-        fi
-        ;;
-    *)
-        note "no ACF filter control on this page — bare-<label> check SKIPPED, not passed (count was ${bare})"
-        note 'the defect at class-gbqf-blocks.php:851 is in the ACF branch; blueprint v2 needs an ACF field group to reach it'
-        ;;
+    *'gbqf-filter-metabox'*) ok 'Meta Box filter control rendered (branch is reachable)' ;;
+    *) bad 'no .gbqf-filter-metabox in the response — the Meta Box control did not render, so the checks below are vacuous' ;;
 esac
+
+case "${BASE}" in
+    *'gbqf-filter-acf'*) ok 'ACF filter control rendered (branch is reachable)' ;;
+    *) bad 'no .gbqf-filter-acf in the response — the ACF control did not render, so the checks below are vacuous' ;;
+esac
+
+case "${BASE}" in
+    *'<label for="gbqf_mb_gbqf_color"'*) ok 'Meta Box select has an associated label' ;;
+    *) bad 'Meta Box select label is not associated (no <label for="gbqf_mb_gbqf_color">)' ;;
+esac
+
+case "${BASE}" in
+    *'<label for="gbqf_acf_gbqf_size"'*) ok 'ACF select has an associated label' ;;
+    *) bad 'ACF select label is not associated (no <label for="gbqf_acf_gbqf_size">)' ;;
+esac
+
+# The `for` must point at something. An id that no element carries is a dangling
+# reference — assistive tech follows it to nothing, which is worse than a bare
+# label, and it is exactly what the Meta Box radio branch used to emit.
+for pair in 'gbqf_mb_gbqf_color:Meta Box' 'gbqf_acf_gbqf_size:ACF'; do
+    ctl_id="${pair%%:*}"; ctl_name="${pair##*:}"
+    case "${BASE}" in
+        *"id=\"${ctl_id}\""*) ok "${ctl_name} label's for= resolves to a real control" ;;
+        *) bad "${ctl_name} label points at id='${ctl_id}', but no element carries it (dangling reference)" ;;
+    esac
+done
+
+bare=$(printf '%s' "${BASE}" | grep -o '<label>' | wc -l | tr -d ' ' || true)
+if [ "${bare}" = "0" ]; then
+    ok 'no bare <label> tags in the rendered form'
+else
+    bad "${bare} bare <label> tag(s) with no for= attribute — unassociated labels"
+    note 'both fixture fields are selects, so every field label here should carry a for='
+fi
+
+# ---------------------------------------------------------------------------
+# 7. Meta Box field filter through an ID-matched target. (blueprint v3)
+#
+# The scoped filter block owns exactly one Meta Box field, gbqf_color, and the
+# fixture posts split 2/2 on it. So a working field filter shows 2 rows — a
+# count that is neither 4 (no filter applied) nor 1 (the search count), which is
+# what makes it unmistakable.
+#
+# This is the first assertion that a Target carries anything BEYOND a scope: the
+# field list travels with the matched target, and get_meta_filters() is handed
+# it rather than deriving one.
+# ---------------------------------------------------------------------------
+echo ""
+echo "7. Meta Box field filter, id-matched target (v3)"
+
+MB=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5Bgbqf_color%5D=red' || true)
+[ -n "${MB}" ] || err 'empty response for the Meta Box field request'
+
+expect "${MB}" "${M_SCOPED}"     2 'scoped loop filters on its owned Meta Box field'
+expect "${MB}" "${M_CONTROL}"    4 'control loop untouched by a Meta Box field filter'
+expect "${MB}" "${M_UNSCOPED}"   4 'unscoped loop untouched by a Meta Box field filter'
+expect "${MB}" "${M_LEGACY}"     4 'legacy loop untouched by a Meta Box field filter'
+expect "${MB}" "${M_CLASSMATCH}" 4 'classmatch loop untouched by another target Meta Box field'
+
+# ---------------------------------------------------------------------------
+# 8. ACF field filter through a CLASS-matched target. (blueprint v3)
+#
+# The same shape as 7, but on the block whose loop matches by CLASS — so the
+# matched target key ('gbqf-alias') and the loop's own id
+# ('gbqf-loop-classmatch') differ.
+#
+# Section 5 proved the SCOPE is taken from the target key. This proves the FIELD
+# LISTS are too. They are separate reads off the same Target, and a fix that
+# corrected one and not the other would pass section 5 and fail here: the loop
+# would read the right namespace but be handed an empty acf_fields list, so
+# gbqf_size would be skipped as unowned and the count would come back 4.
+#
+# gbqf_size splits the posts 2/2 as well, but across a DIFFERENT pair than
+# gbqf_color — so 2 rows here cannot be the Meta Box filter having leaked.
+# ---------------------------------------------------------------------------
+echo ""
+echo "8. ACF field filter, class-matched target (v3)"
+
+ACF=$(fetch 'gbqf%5Bgbqf-alias%5D%5Bmeta%5D%5Bgbqf_size%5D=large' || true)
+[ -n "${ACF}" ] || err 'empty response for the ACF field request'
+
+n_acf=$(rows "${ACF}" "${M_CLASSMATCH}")
+if [ "${n_acf}" = "2" ]; then
+    ok 'class-matched loop filters on its owned ACF field (2 rows)'
+elif [ "${n_acf}" = "4" ]; then
+    bad 'class-matched loop NOT filtered by its owned ACF field (4 rows)'
+    note 'section 5 passing while this fails means the scope travels off the matched'
+    note 'target key but the FIELD LISTS do not — look at what builds the Target and'
+    note 'at what Filters passes to get_acf_filters().'
+else
+    bad "class-matched loop rendered ${n_acf} rows — expected 2 (works) or 4 (field list not carried)"
+fi
+
+expect "${ACF}" "${M_CONTROL}"  4 'control loop untouched by an ACF field filter'
+expect "${ACF}" "${M_SCOPED}"   4 'scoped loop untouched by another target ACF field'
+expect "${ACF}" "${M_UNSCOPED}" 4 'unscoped loop untouched by an ACF field filter'
+expect "${ACF}" "${M_LEGACY}"   4 'legacy loop untouched by an ACF field filter'
+
+# ---------------------------------------------------------------------------
+# 9. FIELD OWNERSHIP — a block's own namespace does not grant it every field.
+#     (blueprint v3)
+#
+# The ownership rule, and the reason it is not merely tidiness: a filter block
+# declares which fields it filters on, and `Filters::get_meta_filters()` /
+# `get_acf_filters()` skip any key not in that list. Without it, ANY meta key
+# becomes filterable by anyone who can write a URL — including keys the site
+# never meant to expose, on a loop the block legitimately owns. That is a
+# narrower leak than invariant 2 but the same family, and it is the thing these
+# two requests test.
+#
+# Both requests are well-formed and correctly scoped: they address a block's OWN
+# namespace, so targeting cannot decline them. The only thing standing between
+# them and a filtered result is the field list on the Target. 4 rows means the
+# ownership check held; 2 means an unowned field filtered.
+#
+# The two blocks own disjoint fields (manifest.php `filter_blocks`), so each
+# request asks a block to filter on precisely the field the OTHER block owns.
+# ---------------------------------------------------------------------------
+echo ""
+echo "9. field ownership — unowned keys are ignored (v3)"
+
+OWN_A=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bmeta%5D%5Bgbqf_size%5D=large' || true)
+[ -n "${OWN_A}" ] || err 'empty response for the unowned-ACF-field request'
+
+n_a=$(rows "${OWN_A}" "${M_SCOPED}")
+if [ "${n_a}" = "4" ]; then
+    ok 'scoped loop ignores gbqf_size — its block owns no ACF field (4 rows)'
+else
+    bad "scoped loop rendered ${n_a} rows for a field its block never declared — expected 4"
+    note 'the ACF field list on the Target is being ignored, or a fallback is'
+    note 'processing every key when the list is empty. An empty list must mean'
+    note '"owns nothing", never "owns everything".'
+fi
+
+OWN_B=$(fetch 'gbqf%5Bgbqf-alias%5D%5Bmeta%5D%5Bgbqf_color%5D=red' || true)
+[ -n "${OWN_B}" ] || err 'empty response for the unowned-MetaBox-field request'
+
+n_b=$(rows "${OWN_B}" "${M_CLASSMATCH}")
+if [ "${n_b}" = "4" ]; then
+    ok 'classmatch loop ignores gbqf_color — its block owns no Meta Box field (4 rows)'
+else
+    bad "classmatch loop rendered ${n_b} rows for a field its block never declared — expected 4"
+    note 'same rule as above, on the Meta Box side.'
+fi
+
+# Nothing else may move on either request either.
+expect "${OWN_A}" "${M_CONTROL}" 4 'control loop untouched by an unowned-field request'
+expect "${OWN_B}" "${M_CONTROL}" 4 'control loop untouched by an unowned-field request (ACF side)'
 
 echo ""
 if [ "${FAIL}" -gt 0 ]; then

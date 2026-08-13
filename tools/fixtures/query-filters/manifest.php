@@ -41,7 +41,23 @@ return array(
 	 * loop's own id. That difference is what decides which URL namespace
 	 * Params reads, so v1 could not see it at all.
 	 */
-	'version' => 2,
+	/*
+	 * v3 adds CUSTOM FIELD ownership. v1 and v2 only ever filtered on `search`,
+	 * which every filter block renders unconditionally and which no block
+	 * "owns" — so they could not see the second half of what a Target carries.
+	 *
+	 * A Target is a claimed loop PLUS the field lists that block owns
+	 * (`mb_fields()`, `acf_fields()`), and `Filters::get_meta_filters()` /
+	 * `get_acf_filters()` skip any key not in those lists. That skip is an
+	 * ownership rule in the same family as the targeting rule: block A's
+	 * namespace must not become a way to filter on a field block A never
+	 * declared. Nothing exercised it until v3.
+	 *
+	 * It also re-tests the v2 class-match defect on a second axis. Both
+	 * `scope_id()` and the field lists come off the matched target key; v2
+	 * proved the scope travels, and this proves the FIELDS travel with it.
+	 */
+	'version' => 3,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
@@ -61,11 +77,65 @@ return array(
 	 * 'Bravo' is the search term used throughout: it appears in exactly one
 	 * title, and as a substring of no other.
 	 */
+	/*
+	 * v3 adds `meta` per post: the Meta Box field `gbqf_color` and the ACF field
+	 * `gbqf_size`, stored as plain post meta under their own names (which is
+	 * what both integrations query on).
+	 *
+	 * The values are chosen so each filter yields a DISTINCT row count, because
+	 * the harness reads counts and nothing else:
+	 *
+	 *   no filter          -> 4
+	 *   search=Bravo       -> 1   (one title matches)
+	 *   gbqf_color=red     -> 2   (alpha, charlie)
+	 *   gbqf_size=large    -> 2   (bravo, charlie)
+	 *
+	 * 2 is deliberately not 1 and not 4: a field filter that silently fell back
+	 * to "no filter" would read as 4, and one that collapsed onto the search
+	 * would read as 1. Neither can be mistaken for a working field filter.
+	 *
+	 * The two fields also cut ACROSS each other — {alpha,charlie} vs
+	 * {bravo,charlie} overlap in one post but neither contains the other — so a
+	 * result that mixed the two up cannot land on the right count by accident.
+	 */
 	'posts' => array(
-		array( 'slug' => 'gbqf-alpha',   'title' => 'GBQF Alpha' ),
-		array( 'slug' => 'gbqf-bravo',   'title' => 'GBQF Bravo' ),
-		array( 'slug' => 'gbqf-charlie', 'title' => 'GBQF Charlie' ),
-		array( 'slug' => 'gbqf-delta',   'title' => 'GBQF Delta' ),
+		array( 'slug' => 'gbqf-alpha',   'title' => 'GBQF Alpha',   'meta' => array( 'gbqf_color' => 'red',  'gbqf_size' => 'small' ) ),
+		array( 'slug' => 'gbqf-bravo',   'title' => 'GBQF Bravo',   'meta' => array( 'gbqf_color' => 'blue', 'gbqf_size' => 'large' ) ),
+		array( 'slug' => 'gbqf-charlie', 'title' => 'GBQF Charlie', 'meta' => array( 'gbqf_color' => 'red',  'gbqf_size' => 'large' ) ),
+		array( 'slug' => 'gbqf-delta',   'title' => 'GBQF Delta',   'meta' => array( 'gbqf_color' => 'blue', 'gbqf_size' => 'small' ) ),
+	),
+
+	/*
+	 * Field definitions. schema.php registers these — Meta Box via
+	 * `rwmb_meta_boxes`, ACF via `acf_add_local_field_group()` — from this one
+	 * declaration, so the registered field and the seeded values cannot drift.
+	 *
+	 * Both are `select` with explicit choices, and both filter blocks leave
+	 * controlType at 'auto'. That resolves to a single <select> control, which
+	 * matters for the accessibility assertions: a <select> has one id for a
+	 * <label for> to point at. Radio/checkbox control types render a GROUP of
+	 * inputs with no single labellable control, which is a different (and
+	 * currently unfixed) labelling problem — see
+	 * .scratch/targeting-module/issues/03-group-control-labelling.md. Keeping
+	 * this fixture on selects keeps section 6 measuring one thing.
+	 */
+	'fields' => array(
+		'mb' => array(
+			'id'      => 'gbqf_color',
+			'name'    => 'GBQF Color',
+			'type'    => 'select',
+			'options' => array( 'red' => 'Red', 'blue' => 'Blue' ),
+		),
+		'acf' => array(
+			// ACF needs a stable field KEY, not just a name. Hardcoded rather
+			// than generated: acf_add_local_field_group() upserts on the key,
+			// so a changing key would orphan a group on every seed.
+			'key'     => 'field_gbqf_size',
+			'name'    => 'gbqf_size',
+			'label'   => 'GBQF Size',
+			'type'    => 'select',
+			'choices' => array( 'small' => 'Small', 'large' => 'Large' ),
+		),
 	),
 
 	'page' => array(
@@ -143,12 +213,32 @@ return array(
 	 * (assets/js/gbqf-frontend.js), and this blueprint is measuring the PHP
 	 * rule; leaving AJAX on would let a JS-side decision colour a PHP-side
 	 * result.
+	 *
+	 * v3 gives two of the blocks DISJOINT field ownership — the scoped block
+	 * owns only the Meta Box field, the class-matching block owns only the ACF
+	 * field, and neither owns the other's. The disjointness is the test: both
+	 * fields live in the same `[meta]` namespace within a block's own scope, so
+	 * the ONLY thing that can stop `gbqf[gbqf-loop-scoped][meta][gbqf_size]`
+	 * from filtering is the ownership check in `Filters::get_meta_filters()` /
+	 * `get_acf_filters()`. If those lists were dropped, ignored, or taken off
+	 * the wrong target, an unowned field would filter and the harness sees it.
+	 *
+	 * Splitting them MB-vs-ACF rather than giving each block a different MB
+	 * field also means each integration is covered once, and the ACF one rides
+	 * on the class-matched block — so it re-proves the v2 fix on the field axis.
 	 */
 	'filter_blocks' => array(
 		array( 'target_id' => '' ),
-		array( 'target_id' => 'gbqf-loop-scoped' ),
+		array(
+			'target_id' => 'gbqf-loop-scoped',
+			'mb_field'  => 'gbqf_color',
+		),
 		// v2. Names a CLASS on the classmatch loop, never an HTML id on the
 		// page — so it can only ever be matched by the class rule.
-		array( 'target_id' => 'gbqf-alias' ),
+		// v3. Owns the ACF field, and no Meta Box field.
+		array(
+			'target_id' => 'gbqf-alias',
+			'acf_field' => 'gbqf_size',
+		),
 	),
 );
