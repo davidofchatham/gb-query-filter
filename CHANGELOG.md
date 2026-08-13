@@ -9,6 +9,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## [0.4.0] — Unreleased
 
 ### Security
+- **Any post meta key was filterable through a filter block that declared no fields.** A block's
+  field lists (`metaBoxFields` / `acfFields`) are the statement of which fields it filters on, but an
+  **empty** list was documented and implemented as "process all keys". The default filter block
+  enables no custom-field filtering at all, so the vulnerable list was the *default* one, not an edge
+  case: on any loop such a block legitimately claimed, `gbqf[<target>][meta][<any-key>]=<value>`
+  filtered the results — including protected `_`-prefixed keys the site never exposed.
+
+  Measured on a test site with an undeclared protected key: a correct value returned 1 row and a
+  wrong value 0, making it a value oracle over arbitrary post meta, reachable unauthenticated. That
+  is security invariant 1 in [CONTEXT.md](CONTEXT.md) — "front-end filtering must not expose anything
+  a user couldn't see without the filter".
+
+  An empty ownership list now means **owns nothing**. A block filters only on fields it declares.
+
 - **A Query Loop that no filter block targets could be filtered from the URL.** Any loop carrying a
   class matching `gbqf-target-*` passed the gate without any check that a filter block had
   registered that name, and was then filtered by flat `?gbqf_search=` (and sibling) parameters.
@@ -51,14 +65,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   how a filter block claims them, so any difference in the rendered result set is attributable to
   the targeting rule and nothing else. Dev-only; excluded from the distributable ZIP.
 
-  Both defects above were **committed as failing tests before being fixed**, so "this was broken and
-  now is not" is a diff between two runs rather than an assertion. Against 0.3.0 the blueprint
-  reports 2 failed / 23 passed; against this release, 25 passed.
+  Every defect in this release was **committed as a failing test before being fixed**, so "this was
+  broken and now is not" is a diff between two runs rather than an assertion. Blueprint v2 reported
+  2 failed / 23 passed against 0.3.0; v3 reported 4 failed / 42 passed before the field-ownership
+  and label fixes. Against this release, 46 passed.
+
+  Blueprint **v3** adds custom-field coverage: a Meta Box field and an ACF field registered from one
+  manifest declaration (via `schema.php` and a mu-plugin stub, because the definitions must exist at
+  *render* time, not only during the seed), owned disjointly by two filter blocks. That is what
+  caught the ownership defect above, and it re-proves the class-match fix on a second axis — a
+  `Target` carries field lists as well as a scope, and both must travel off the matched target key.
 
   Split into `verify.php` (the fixtures are real) and `render-surface.sh` (behaviour, over real
   HTTP) because wp-cli is structurally blind here: registration happens in the filter block's
   `render_callback` and the targeting decision inside `generateblocks_query_wp_query_args` during a
   render. Under wp-cli neither fires, so every "this loop was not filtered" check passes vacuously.
+
+### Fixed (accessibility)
+- **Custom-field filter labels were not associated with their control** ([ADR-0003](docs/adr/0003-accessibility-target-current-wcag-aa.md)).
+  The ACF branch emitted a bare `<label>` in every case, so its select and text controls had no
+  programmatic association at all; the Meta Box branch emitted `for="gbqf_mb_{id}"` over its radio
+  *group*, where no element carries that id — a dangling reference. Both now emit `for` only where a
+  single control below actually sets the id.
+
+  Group controls (Meta Box radio; ACF radio, checkboxes, true/false) still lack an accessible group
+  name and need `fieldset`/`legend` or `role="group"` — tracked separately, not fixed here.
 
 ### Changed
 - Flat (`gbqf_*`) URL parameters are reachable **only** under the legacy `all` scope, or when a

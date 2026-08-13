@@ -93,7 +93,7 @@ class Filters {
      * Format (scoped): gbqf[target][meta][meta_key]=value
      *
      * @param string[] $allowed_field_names Meta Box field IDs owned by this block.
-     *                                      If empty, processes all keys (legacy behaviour).
+     *                                      EMPTY MEANS OWNS NOTHING — see below.
      * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
      * @return array[] Array of [ 'key' => string, 'value' => string ].
      */
@@ -106,13 +106,30 @@ class Filters {
             return [];
         }
 
+        // An empty ownership list means the block declared NO Meta Box fields,
+        // so it filters on none. This used to fall through to "process every
+        // key" (documented as legacy behaviour), which made any meta key in the
+        // URL filterable through a loop the block legitimately claimed —
+        // including protected `_`-prefixed keys the site never exposed. A
+        // correct guess narrowed the loop and a wrong one emptied it, which is a
+        // value oracle over arbitrary post meta and breaks security invariant 1
+        // in CONTEXT.md.
+        //
+        // The default filter block enables no custom-field filtering at all, so
+        // the vulnerable list was the DEFAULT one, not an edge case.
+        //
+        // Covered by render-surface.sh section 9.
+        if ( empty( $allowed_field_names ) ) {
+            return [];
+        }
+
         $filters = [];
 
         foreach ( $raw_meta as $key => $value ) {
             $key = sanitize_key( $key );
 
             // Skip keys not belonging to this block's Meta Box fields.
-            if ( ! empty( $allowed_field_names ) && ! in_array( $key, $allowed_field_names, true ) ) {
+            if ( ! in_array( $key, $allowed_field_names, true ) ) {
                 continue;
             }
 
@@ -145,7 +162,7 @@ class Filters {
      * Format (scoped, multi):  gbqf[target][meta][field_name][]=value1&...
      *
      * @param string[] $allowed_field_names ACF field names owned by this block.
-     *                                      If empty, processes all keys (legacy behaviour).
+     *                                      EMPTY MEANS OWNS NOTHING — see get_meta_filters().
      * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
      * @return array[] Array of [ 'key' => string, 'value' => string|array, 'compare' => string ].
      */
@@ -158,13 +175,19 @@ class Filters {
             return [];
         }
 
+        // Owns nothing, filters nothing. Same rule and same reason as
+        // get_meta_filters() — see the comment there.
+        if ( empty( $allowed_field_names ) ) {
+            return [];
+        }
+
         $filters = [];
 
         foreach ( $raw_meta as $field_name => $value ) {
             $field_name = sanitize_key( $field_name );
 
             // Skip keys not belonging to this block's ACF fields.
-            if ( ! empty( $allowed_field_names ) && ! in_array( $field_name, $allowed_field_names, true ) ) {
+            if ( ! in_array( $field_name, $allowed_field_names, true ) ) {
                 continue;
             }
 
