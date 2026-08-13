@@ -1,0 +1,13 @@
+# Files and directories excluded from the distributable ZIP.
+# One pattern per line (rsync --exclude-from syntax).
+.git
+.github
+.gitignore
+.distignore
+.claude
+.scratch
+.DS_Store
+*.log
+*.code-workspace
+CONTEXT.md
+docs/adr

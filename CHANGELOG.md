@@ -6,6 +6,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] — 2026-08-13
+
+### Changed
+- Plugin display name is now **GB Query Filter** (was "GB Query Filters"), matching the README and
+  the repository. `Plugin URI` now points at <https://github.com/davidofchatham/gb-query-filter>.
+  The admin menu entry stays **GenerateBlocks → Query Filters**.
+- **Slug normalized to `gb-query-filter` (singular) everywhere.** The main plugin file is renamed
+  `gb-query-filters.php` → `gb-query-filter.php` and the text domain `gb-query-filters` →
+  `gb-query-filter`, matching the repository name, the Plugin URI, the settings page slug and the
+  install directory. Block name (`gbqf/query-filter`), all `gbqf_*` option keys and all script and
+  style handles are unchanged, so **no settings are lost** — but because WordPress identifies a
+  plugin by its main file path, an existing install will show the plugin as deactivated after the
+  update and must be reactivated once.
+
+### Added
+- GitHub Actions release workflow: pushing a `v*` tag builds a clean distributable ZIP
+  (`gb-query-filter-<version>.zip`, excluding dev files listed in `.distignore`) and attaches it to
+  the GitHub release. The build fails if the tag version does not match both the plugin header
+  `Version:` and `GBQF_VERSION`. Untrusted workflow input (the `workflow_dispatch` tag) reaches the
+  shell only through the environment, never by template interpolation, and the tag must match
+  `v<digits>…`; `contents: write` is scoped to the build job rather than the whole workflow.
+- README documents the upgrade step this rename requires and points to the release asset rather
+  than the repository ZIP.
+
+---
+
 ## [0.2.1] — 2026-08-13
 
 ### Fixed

@@ -73,11 +73,24 @@ Two filtering modes are available:
 
 ### From GitHub
 
-1.  Download the repository ZIP.
+1.  Download `gb-query-filter-<version>.zip` from the
+    [latest release](https://github.com/davidofchatham/gb-query-filter/releases/latest).
+    This is a clean build; the repository ZIP contains development files
+    and an extra nested directory, so prefer the release asset.
 2.  Upload it to WordPress under Plugins → Add New → Upload Plugin.
 3.  Activate the plugin.
 4.  Add the GB Query Filter block to any page containing a
     GenerateBlocks Query Loop.
+
+### Upgrading from 0.2.x
+
+Version 0.3.0 renamed the main plugin file from `gb-query-filters.php` to
+`gb-query-filter.php`. WordPress identifies a plugin by that path, so an
+existing install **deactivates itself** on upgrade and must be reactivated
+once. No settings are lost. If you sync files rather than reinstalling,
+delete the stale `gb-query-filters.php` from the plugin directory first —
+otherwise both files register the plugin and activating both is a fatal
+error.
 
 ## Usage
 

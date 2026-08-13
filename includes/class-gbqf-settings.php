@@ -28,8 +28,8 @@ class Settings {
 	public static function add_admin_menu() {
 		add_submenu_page(
 			'generateblocks',
-			__( 'Query Filters', 'gb-query-filters' ),
-			__( 'Query Filters', 'gb-query-filters' ),
+			__( 'Query Filters', 'gb-query-filter' ),
+			__( 'Query Filters', 'gb-query-filter' ),
 			'manage_options',
 			'gb-query-filter',
 			[ __CLASS__, 'render_settings_page' ]
@@ -47,7 +47,7 @@ class Settings {
 		// ---- General section ------------------------------------------------
 		add_settings_section(
 			'gbqf_general',
-			__( 'General', 'gb-query-filters' ),
+			__( 'General', 'gb-query-filter' ),
 			'__return_false',
 			'gb-query-filter'
 		);
@@ -58,7 +58,7 @@ class Settings {
 		] );
 		add_settings_field(
 			'gbqf_filter_priority',
-			__( 'Hook Priority', 'gb-query-filters' ),
+			__( 'Hook Priority', 'gb-query-filter' ),
 			[ __CLASS__, 'render_field_priority' ],
 			'gb-query-filter',
 			'gbqf_general'
@@ -70,7 +70,7 @@ class Settings {
 		] );
 		add_settings_field(
 			'gbqf_preserve_search',
-			__( 'Merge Search Terms', 'gb-query-filters' ),
+			__( 'Merge Search Terms', 'gb-query-filter' ),
 			[ __CLASS__, 'render_field_preserve_search' ],
 			'gb-query-filter',
 			'gbqf_general'
@@ -82,7 +82,7 @@ class Settings {
 		] );
 		add_settings_field(
 			'gbqf_enable_debug_logging',
-			__( 'Debug Logging', 'gb-query-filters' ),
+			__( 'Debug Logging', 'gb-query-filter' ),
 			[ __CLASS__, 'render_field_debug_logging' ],
 			'gb-query-filter',
 			'gbqf_general'
@@ -95,7 +95,7 @@ class Settings {
 		if ( $metabox_active || $acf_active ) {
 			add_settings_section(
 				'gbqf_integrations',
-				__( 'Integrations', 'gb-query-filters' ),
+				__( 'Integrations', 'gb-query-filter' ),
 				[ __CLASS__, 'render_integrations_intro' ],
 				'gb-query-filter'
 			);
@@ -108,7 +108,7 @@ class Settings {
 			] );
 			add_settings_field(
 				self::OPTION_KEY,
-				__( 'Meta Box Integration', 'gb-query-filters' ),
+				__( 'Meta Box Integration', 'gb-query-filter' ),
 				[ __CLASS__, 'render_field_metabox' ],
 				'gb-query-filter',
 				'gbqf_integrations'
@@ -122,7 +122,7 @@ class Settings {
 			] );
 			add_settings_field(
 				self::OPTION_KEY_ACF,
-				__( 'ACF Integration', 'gb-query-filters' ),
+				__( 'ACF Integration', 'gb-query-filter' ),
 				[ __CLASS__, 'render_field_acf' ],
 				'gb-query-filter',
 				'gbqf_integrations'
@@ -140,7 +140,7 @@ class Settings {
 			'<input type="number" id="gbqf_filter_priority" name="gbqf_filter_priority" value="%d" min="1" class="small-text" />
 			<p class="description">%s</p>',
 			$value,
-			esc_html__( 'Controls when GBQF runs relative to other plugins that modify Query Loop queries. Higher numbers run later. Default: 20.', 'gb-query-filters' )
+			esc_html__( 'Controls when GBQF runs relative to other plugins that modify Query Loop queries. Higher numbers run later. Default: 20.', 'gb-query-filter' )
 		);
 	}
 
@@ -150,8 +150,8 @@ class Settings {
 			'<label><input type="checkbox" id="gbqf_preserve_search" name="gbqf_preserve_search" value="1" %s /> %s</label>
 			<p class="description">%s</p>',
 			checked( $checked, true, false ),
-			esc_html__( 'Enable', 'gb-query-filters' ),
-			esc_html__( 'Combine GBQF search with search terms applied by other plugins, instead of replacing them.', 'gb-query-filters' )
+			esc_html__( 'Enable', 'gb-query-filter' ),
+			esc_html__( 'Combine GBQF search with search terms applied by other plugins, instead of replacing them.', 'gb-query-filter' )
 		);
 	}
 
@@ -161,13 +161,13 @@ class Settings {
 			'<label><input type="checkbox" id="gbqf_enable_debug_logging" name="gbqf_enable_debug_logging" value="1" %s /> %s</label>
 			<p class="description">%s</p>',
 			checked( $checked, true, false ),
-			esc_html__( 'Enable', 'gb-query-filters' ),
-			esc_html__( 'Log query arguments before and after GBQF modifications to the PHP error log, and enable browser console output on the frontend.', 'gb-query-filters' )
+			esc_html__( 'Enable', 'gb-query-filter' ),
+			esc_html__( 'Log query arguments before and after GBQF modifications to the PHP error log, and enable browser console output on the frontend.', 'gb-query-filter' )
 		);
 	}
 
 	public static function render_integrations_intro() {
-		echo '<p>' . esc_html__( 'Enable or disable GBQF integration with third-party field plugins.', 'gb-query-filters' ) . '</p>';
+		echo '<p>' . esc_html__( 'Enable or disable GBQF integration with third-party field plugins.', 'gb-query-filter' ) . '</p>';
 	}
 
 	public static function render_field_metabox() {
@@ -177,7 +177,7 @@ class Settings {
 			esc_attr( self::OPTION_KEY ),
 			esc_attr( self::OPTION_KEY ),
 			checked( $checked, true, false ),
-			esc_html__( 'Enable Meta Box field filtering', 'gb-query-filters' )
+			esc_html__( 'Enable Meta Box field filtering', 'gb-query-filter' )
 		);
 	}
 
@@ -188,7 +188,7 @@ class Settings {
 			esc_attr( self::OPTION_KEY_ACF ),
 			esc_attr( self::OPTION_KEY_ACF ),
 			checked( $checked, true, false ),
-			esc_html__( 'Enable ACF field filtering', 'gb-query-filters' )
+			esc_html__( 'Enable ACF field filtering', 'gb-query-filter' )
 		);
 	}
 

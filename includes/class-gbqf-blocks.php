@@ -667,19 +667,19 @@ class Blocks {
         if ( $enable_search ) {
             $html .= '<div class="gbqf-filter-field gbqf-filter-search">';
             // Label visually hidden, placeholder provides prompt.
-            $html .= '<label for="gbqf_search_input" class="screen-reader-text">' . esc_html__( 'Search', 'gb-query-filters' ) . '</label>';
-            $html .= '<input type="text" id="gbqf_search_input" name="' . esc_attr( $name_search ) . '" value="' . esc_attr( $current_search ) . '" placeholder="' . esc_attr__( 'Search', 'gb-query-filters' ) . '" />';
+            $html .= '<label for="gbqf_search_input" class="screen-reader-text">' . esc_html__( 'Search', 'gb-query-filter' ) . '</label>';
+            $html .= '<input type="text" id="gbqf_search_input" name="' . esc_attr( $name_search ) . '" value="' . esc_attr( $current_search ) . '" placeholder="' . esc_attr__( 'Search', 'gb-query-filter' ) . '" />';
             $html .= '</div>';
         }
 
         // CATEGORIES FIELD
         if ( $enable_categories && ! empty( $categories ) ) {
             $html .= '<div class="gbqf-filter-field gbqf-filter-categories">';
-            $html .= '<span class="gbqf-filter-label">' . esc_html__( 'Categories', 'gb-query-filters' ) . '</span>';
+            $html .= '<span class="gbqf-filter-label">' . esc_html__( 'Categories', 'gb-query-filter' ) . '</span>';
 
             if ( 'select' === $cats_control_type ) {
-                $html .= '<select name="' . esc_attr( $name_cat ) . '" aria-label="' . esc_attr__( 'Categories', 'gb-query-filters' ) . '">';
-                $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filters' ) . '</option>';
+                $html .= '<select name="' . esc_attr( $name_cat ) . '" aria-label="' . esc_attr__( 'Categories', 'gb-query-filter' ) . '">';
+                $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
                 foreach ( $categories as $cat ) {
                     $cat_id  = (int) $cat->term_id;
                     $selected = in_array( $cat_id, $selected_cats, true ) ? 'selected' : '';
@@ -707,11 +707,11 @@ class Blocks {
         // TAGS FIELD
         if ( $enable_tags && ! empty( $tags ) ) {
             $html .= '<div class="gbqf-filter-field gbqf-filter-tags">';
-            $html .= '<span class="gbqf-filter-label">' . esc_html__( 'Tags', 'gb-query-filters' ) . '</span>';
+            $html .= '<span class="gbqf-filter-label">' . esc_html__( 'Tags', 'gb-query-filter' ) . '</span>';
 
             if ( 'select' === $tags_control_type ) {
-                $html .= '<select name="' . esc_attr( $name_tag ) . '" aria-label="' . esc_attr__( 'Tags', 'gb-query-filters' ) . '">';
-                $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filters' ) . '</option>';
+                $html .= '<select name="' . esc_attr( $name_tag ) . '" aria-label="' . esc_attr__( 'Tags', 'gb-query-filter' ) . '">';
+                $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
                 foreach ( $tags as $tag ) {
                     $tag_id  = (int) $tag->term_id;
                     $selected = in_array( $tag_id, $selected_tags, true ) ? 'selected' : '';
@@ -751,7 +751,7 @@ class Blocks {
 
                 if ( 'select' === $extra_control_type ) {
                     $html .= '<select name="' . esc_attr( sprintf( $name_tax_fmt, $slug ) ) . '" aria-label="' . esc_attr( $label ) . '">';
-                    $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filters' ) . '</option>';
+                    $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
                     foreach ( $terms as $term ) {
                         $term_id  = (int) $term->term_id;
                         $selected = in_array( $term_id, $selected_for_tax, true ) ? 'selected' : '';
@@ -799,7 +799,7 @@ class Blocks {
                         $html .= '<div class="gbqf-filter-options">';
                         $html .= '<label class="gbqf-filter-option">';
                         $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
-                        $html .= '<span>' . esc_html__( 'Any', 'gb-query-filters' ) . '</span>';
+                        $html .= '<span>' . esc_html__( 'Any', 'gb-query-filter' ) . '</span>';
                         $html .= '</label>';
 
                         foreach ( $options as $opt_value => $opt_label ) {
@@ -816,7 +816,7 @@ class Blocks {
                         $html .= '<input type="text" id="gbqf_mb_' . esc_attr( $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="' . esc_attr( $selected ) . '" />';
                     } else {
                         $html .= '<select id="gbqf_mb_' . esc_attr( $field_id ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '">';
-                        $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filters' ) . '</option>';
+                        $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 
                         foreach ( $options as $opt_value => $opt_label ) {
                             $opt_value      = (string) $opt_value;
@@ -857,15 +857,15 @@ class Blocks {
                     $html .= '<div class="gbqf-filter-options">';
                     $html .= '<label class="gbqf-filter-option">';
                     $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
-                    $html .= '<span>' . esc_html__( 'Any', 'gb-query-filters' ) . '</span>';
+                    $html .= '<span>' . esc_html__( 'Any', 'gb-query-filter' ) . '</span>';
                     $html .= '</label>';
                     $html .= '<label class="gbqf-filter-option">';
                     $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="1" ' . checked( $selected, '1', false ) . ' />';
-                    $html .= '<span>' . esc_html__( 'Yes', 'gb-query-filters' ) . '</span>';
+                    $html .= '<span>' . esc_html__( 'Yes', 'gb-query-filter' ) . '</span>';
                     $html .= '</label>';
                     $html .= '<label class="gbqf-filter-option">';
                     $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="0" ' . checked( $selected, '0', false ) . ' />';
-                    $html .= '<span>' . esc_html__( 'No', 'gb-query-filters' ) . '</span>';
+                    $html .= '<span>' . esc_html__( 'No', 'gb-query-filter' ) . '</span>';
                     $html .= '</label>';
                     $html .= '</div>';
                 } elseif ( $has_choices && ! empty( $choices ) ) {
@@ -891,7 +891,7 @@ class Blocks {
                         $html .= '<div class="gbqf-filter-options">';
                         $html .= '<label class="gbqf-filter-option">';
                         $html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
-                        $html .= '<span>' . esc_html__( 'Any', 'gb-query-filters' ) . '</span>';
+                        $html .= '<span>' . esc_html__( 'Any', 'gb-query-filter' ) . '</span>';
                         $html .= '</label>';
 
                         foreach ( $choices as $choice_value => $choice_label ) {
@@ -909,7 +909,7 @@ class Blocks {
                     } else {
                         // Default: select dropdown.
                         $html .= '<select id="gbqf_acf_' . esc_attr( $field_name ) . '" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '">';
-                        $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filters' ) . '</option>';
+                        $html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 
                         foreach ( $choices as $choice_value => $choice_label ) {
                             $choice_value = (string) $choice_value;
@@ -932,7 +932,7 @@ class Blocks {
         $html .= '<div class="gbqf-filter-actions">';
 
         if ( $enable_apply ) {
-            $html .= '<button type="submit">' . esc_html__( 'Apply', 'gb-query-filters' ) . '</button>';
+            $html .= '<button type="submit">' . esc_html__( 'Apply', 'gb-query-filter' ) . '</button>';
         }
 
         if ( $reset_url ) {
@@ -941,7 +941,7 @@ class Blocks {
                 $reset_class .= ' is-hidden';
             }
             $html .= ' <a class="' . esc_attr( $reset_class ) . '" href="' . esc_url( $reset_url ) . '">';
-            $html .= esc_html__( 'Reset', 'gb-query-filters' );
+            $html .= esc_html__( 'Reset', 'gb-query-filter' );
             $html .= '</a>';
         }
 

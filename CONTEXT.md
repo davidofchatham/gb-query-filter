@@ -61,7 +61,7 @@ Full param/data-attribute reference: [docs/developer-filters.md](docs/developer-
 
 - `GBQF\` namespace; WordPress coding standards.
 - No build step — edit PHP/JS/CSS directly.
-- Version constant in [gb-query-filters.php](gb-query-filters.php) (`GBQF_VERSION`). Semantic versioning. Keep [CHANGELOG.md](CHANGELOG.md) current (Keep a Changelog format).
+- Version constant in [gb-query-filter.php](gb-query-filter.php) (`GBQF_VERSION`). Semantic versioning. Keep [CHANGELOG.md](CHANGELOG.md) current (Keep a Changelog format).
 - `gbqf_loaded` action fires once the plugin is initialized.
 
 ## Testing

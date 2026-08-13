@@ -84,7 +84,7 @@ final class Plugin {
         Settings::init();
 
         /**
-         * Fires when GB Query Filters is fully loaded.
+         * Fires when GB Query Filter is fully loaded.
          */
         do_action( 'gbqf_loaded' );
     }

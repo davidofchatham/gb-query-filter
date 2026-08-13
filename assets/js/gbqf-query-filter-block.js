@@ -40,7 +40,7 @@
 
     registerBlockType( 'gbqf/query-filter', {
         apiVersion: 3,
-        title: __( 'GB Query Filter', 'gb-query-filters' ),
+        title: __( 'GB Query Filter', 'gb-query-filter' ),
         icon: { src: blockIcon },
         category: 'widgets',
 
@@ -283,15 +283,15 @@
                         el( TextControl, {
                             __next40pxDefaultSize: true,
                             __nextHasNoMarginBottom: true,
-                            label: __( 'Meta Box field', 'gb-query-filters' ),
+                            label: __( 'Meta Box field', 'gb-query-filter' ),
                             value: field.id,
                             onChange: ( v ) => {
                                 const next = [ ...metaBoxFields ];
                                 next[ index ] = { ...field, id: v };
                                 syncMetaBoxFieldId( next );
                             },
-                            placeholder: __( 'e.g. project_status', 'gb-query-filters' ),
-                            help: __( 'Enter the Meta Box field ID', 'gb-query-filters' ),
+                            placeholder: __( 'e.g. project_status', 'gb-query-filter' ),
+                            help: __( 'Enter the Meta Box field ID', 'gb-query-filter' ),
                         } )
                     ),
                     el(
@@ -300,13 +300,13 @@
                         el( SelectControl, {
                             __next40pxDefaultSize: true,
                             __nextHasNoMarginBottom: true,
-                            label: __( 'Control type', 'gb-query-filters' ),
+                            label: __( 'Control type', 'gb-query-filter' ),
                             value: field.controlType || 'auto',
                             options: [
-                                { label: __( 'Auto (based on options)', 'gb-query-filters' ), value: 'auto' },
-                                { label: __( 'Select dropdown', 'gb-query-filters' ), value: 'select' },
-                                { label: __( 'Radio buttons', 'gb-query-filters' ), value: 'radio' },
-                                { label: __( 'Text input', 'gb-query-filters' ), value: 'text' },
+                                { label: __( 'Auto (based on options)', 'gb-query-filter' ), value: 'auto' },
+                                { label: __( 'Select dropdown', 'gb-query-filter' ), value: 'select' },
+                                { label: __( 'Radio buttons', 'gb-query-filter' ), value: 'radio' },
+                                { label: __( 'Text input', 'gb-query-filter' ), value: 'text' },
                             ],
                             onChange: ( v ) => {
                                 const next = [ ...metaBoxFields ];
@@ -324,7 +324,7 @@
                                 isDestructive: true,
                                 variant: 'secondary',
                                 icon: 'trash',
-                                label: __( 'Remove field', 'gb-query-filters' ),
+                                label: __( 'Remove field', 'gb-query-filter' ),
                                 onClick: () => {
                                     const next = metaBoxFields.filter( ( _, i ) => i !== index );
                                     syncMetaBoxFieldId( next );
@@ -367,15 +367,15 @@
                         el( TextControl, {
                             __next40pxDefaultSize: true,
                             __nextHasNoMarginBottom: true,
-                            label: __( 'ACF field name', 'gb-query-filters' ),
+                            label: __( 'ACF field name', 'gb-query-filter' ),
                             value: field.id,
                             onChange: ( v ) => {
                                 const next = [ ...acfFields ];
                                 next[ index ] = { ...field, id: v };
                                 syncAcfFieldId( next );
                             },
-                            placeholder: __( 'e.g. project_color', 'gb-query-filters' ),
-                            help: __( 'Enter the ACF field name (not key)', 'gb-query-filters' ),
+                            placeholder: __( 'e.g. project_color', 'gb-query-filter' ),
+                            help: __( 'Enter the ACF field name (not key)', 'gb-query-filter' ),
                         } )
                     ),
                     el(
@@ -384,14 +384,14 @@
                         el( SelectControl, {
                             __next40pxDefaultSize: true,
                             __nextHasNoMarginBottom: true,
-                            label: __( 'Control type', 'gb-query-filters' ),
+                            label: __( 'Control type', 'gb-query-filter' ),
                             value: field.controlType || 'auto',
                             options: [
-                                { label: __( 'Auto (based on field type)', 'gb-query-filters' ), value: 'auto' },
-                                { label: __( 'Select dropdown', 'gb-query-filters' ), value: 'select' },
-                                { label: __( 'Radio buttons', 'gb-query-filters' ), value: 'radio' },
-                                { label: __( 'Checkboxes', 'gb-query-filters' ), value: 'checkboxes' },
-                                { label: __( 'Text input', 'gb-query-filters' ), value: 'text' },
+                                { label: __( 'Auto (based on field type)', 'gb-query-filter' ), value: 'auto' },
+                                { label: __( 'Select dropdown', 'gb-query-filter' ), value: 'select' },
+                                { label: __( 'Radio buttons', 'gb-query-filter' ), value: 'radio' },
+                                { label: __( 'Checkboxes', 'gb-query-filter' ), value: 'checkboxes' },
+                                { label: __( 'Text input', 'gb-query-filter' ), value: 'text' },
                             ],
                             onChange: ( v ) => {
                                 const next = [ ...acfFields ];
@@ -409,7 +409,7 @@
                                 isDestructive: true,
                                 variant: 'secondary',
                                 icon: 'trash',
-                                label: __( 'Remove field', 'gb-query-filters' ),
+                                label: __( 'Remove field', 'gb-query-filter' ),
                                 onClick: () => {
                                     const next = acfFields.filter( ( _, i ) => i !== index );
                                     syncAcfFieldId( next );
@@ -430,15 +430,15 @@
                     null,
                     el(
                         PanelBody,
-                        { title: __( 'Link Filter to GB Query', 'gb-query-filters' ), initialOpen: true },
+                        { title: __( 'Link Filter to GB Query', 'gb-query-filter' ), initialOpen: true },
                         el( 'div', { className: 'gbqf-control-group gbqf-control-group--advanced' },
                             el( TextControl, {
                                 __next40pxDefaultSize: true,
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Target Query Block ID', 'gb-query-filters' ),
+                                label: __( 'Target Query Block ID', 'gb-query-filter' ),
                                 value: targetId,
                                 onChange: ( v ) => setAttributes( { targetId: cleanId( v ) } ),
-                                placeholder: __( 'e.g. projects-loop', 'gb-query-filters' ),
+                                placeholder: __( 'e.g. projects-loop', 'gb-query-filter' ),
                                 className: 'gbqf-control-full',
                             } )
                         ),
@@ -450,7 +450,7 @@
                                 { className: 'gbqf-control-helper' },
                                 __(
                                     'Copy this auto-generated ID and paste it into the GenerateBlocks Query Loop HTML Anchor.',
-                                    'gb-query-filters'
+                                    'gb-query-filter'
                                 )
                             ),
                             el(
@@ -474,7 +474,7 @@
                                         },
                                         style: { marginLeft: '10px' },
                                     },
-                                    __( 'Copy ID', 'gb-query-filters' )
+                                    __( 'Copy ID', 'gb-query-filter' )
                                 )
                             )
                         )
@@ -482,11 +482,11 @@
 
                     el(
                         PanelBody,
-                        { title: __( 'Filter Controls', 'gb-query-filters' ), initialOpen: false },
+                        { title: __( 'Filter Controls', 'gb-query-filter' ), initialOpen: false },
                         el( 'div', { className: 'gbqf-control-group gbqf-control-group--filter' },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Enable Search Filter', 'gb-query-filters' ),
+                                label: __( 'Enable Search Filter', 'gb-query-filter' ),
                                 checked: enableSearch,
                                 onChange: ( checked ) => setAttributes( { enableSearch: checked } ),
                                 className: 'gbqf-control-full',
@@ -498,7 +498,7 @@
                             { className: 'gbqf-control-group gbqf-control-group--tax' },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Enable Categories Filter', 'gb-query-filters' ),
+                                label: __( 'Enable Categories Filter', 'gb-query-filter' ),
                                 checked: enableCategories,
                                 onChange: ( checked ) =>
                                     setAttributes( { enableCategories: checked } ),
@@ -506,7 +506,7 @@
                             } ),
                             enableCategories &&
                                 el( 'label', { style: { display: 'block', fontSize: '12px', opacity: 0.8, marginBottom: '4px' } },
-                                    __( 'Categories control', 'gb-query-filters' )
+                                    __( 'Categories control', 'gb-query-filter' )
                                 ),
                             enableCategories &&
                                 el( 'select', {
@@ -515,8 +515,8 @@
                                         setAttributes( { categoriesControlType: e.target.value } ),
                                     className: 'gbqf-control-full',
                                 },
-                                    el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filters' ) ),
-                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filters' ) )
+                                    el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filter' ) ),
+                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) )
                                 )
                         ),
 
@@ -525,7 +525,7 @@
                             { className: 'gbqf-control-group gbqf-control-group--tax' },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Enable Tags Filter', 'gb-query-filters' ),
+                                label: __( 'Enable Tags Filter', 'gb-query-filter' ),
                                 checked: enableTags,
                                 onChange: ( checked ) =>
                                     setAttributes( { enableTags: checked } ),
@@ -533,7 +533,7 @@
                             } ),
                             enableTags &&
                                 el( 'label', { style: { display: 'block', fontSize: '12px', opacity: 0.8, marginBottom: '4px' } },
-                                    __( 'Tags control', 'gb-query-filters' )
+                                    __( 'Tags control', 'gb-query-filter' )
                                 ),
                             enableTags &&
                                 el( 'select', {
@@ -542,8 +542,8 @@
                                         setAttributes( { tagsControlType: e.target.value } ),
                                     className: 'gbqf-control-full',
                                 },
-                                    el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filters' ) ),
-                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filters' ) )
+                                    el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filter' ) ),
+                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) )
                                 )
                         ),
 
@@ -552,19 +552,19 @@
                             { className: 'gbqf-control-group gbqf-control-group--tax' },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Enable Additional Taxonomies', 'gb-query-filters' ),
+                                label: __( 'Enable Additional Taxonomies', 'gb-query-filter' ),
                                 checked: enableExtraTaxonomies,
                                 onChange: ( checked ) =>
                                     setAttributes( { enableExtraTaxonomies: checked } ),
                                 help: __(
                                     'Use one or more additional taxonomies as filters.',
-                                    'gb-query-filters'
+                                    'gb-query-filter'
                                 ),
                                 className: 'gbqf-control-full',
                             } ),
                             enableExtraTaxonomies &&
                                 el( 'label', { style: { display: 'block', fontSize: '12px', opacity: 0.8, marginBottom: '4px' } },
-                                    __( 'Additional taxonomies control', 'gb-query-filters' )
+                                    __( 'Additional taxonomies control', 'gb-query-filter' )
                                 ),
                             enableExtraTaxonomies &&
                                 el( 'select', {
@@ -573,8 +573,8 @@
                                         setAttributes( { extraTaxonomiesControlType: e.target.value } ),
                                     className: 'gbqf-control-full',
                                 },
-                                    el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filters' ) ),
-                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filters' ) )
+                                    el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filter' ) ),
+                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) )
                                 ),
                             enableExtraTaxonomies &&
                                 el(
@@ -588,7 +588,7 @@
                                             ( tax ) => `${ tax.label } (${ tax.slug })`
                                         ),
                                         onChange: onChangeExtraTaxonomiesTokens,
-                                        label: __( 'Additional taxonomies', 'gb-query-filters' ),
+                                        label: __( 'Additional taxonomies', 'gb-query-filter' ),
                                         __experimentalShowHowTo: false,
                                         className: 'gbqf-control-full',
                                     } )
@@ -598,12 +598,12 @@
                         el( 'div', { className: 'gbqf-control-group gbqf-control-group--filter' },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Enable AJAX Updates', 'gb-query-filters' ),
+                                label: __( 'Enable AJAX Updates', 'gb-query-filter' ),
                                 checked: enableAjax,
                                 onChange: ( checked ) => setAttributes( { enableAjax: checked } ),
                                 help: __(
                                     'When on, filters update results without a full page reload.',
-                                    'gb-query-filters'
+                                    'gb-query-filter'
                                 ),
                                 className: 'gbqf-control-full',
                             } )
@@ -612,18 +612,18 @@
                         el( 'div', { className: 'gbqf-control-group gbqf-control-group--filter' },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Show Apply Button', 'gb-query-filters' ),
+                                label: __( 'Show Apply Button', 'gb-query-filter' ),
                                 checked: enableApplyButton,
                                 onChange: ( checked ) =>
                                     setAttributes( { enableApplyButton: checked } ),
                                 help: enableApplyButton
                                     ? __(
                                           'When enabled, users click Apply to update results. Disable to auto-apply filters on change.',
-                                          'gb-query-filters'
+                                          'gb-query-filter'
                                       )
                                     : __(
                                           'Filters auto-apply on change. Search/text fields still require Enter.',
-                                          'gb-query-filters'
+                                          'gb-query-filter'
                                       ),
                                 className: 'gbqf-control-full',
                             } )
@@ -633,16 +633,16 @@
                     metaBoxIntegrationEnabled &&
                         el(
                             PanelBody,
-                            { title: __( 'Meta Box Filters', 'gb-query-filters' ), initialOpen: false },
+                            { title: __( 'Meta Box Filters', 'gb-query-filter' ), initialOpen: false },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Enable Meta Box Field Filters', 'gb-query-filters' ),
+                                label: __( 'Enable Meta Box Field Filters', 'gb-query-filter' ),
                                 checked: enableMetaBoxFilter,
                                 onChange: ( checked ) =>
                                     setAttributes( { enableMetaBoxFilter: checked } ),
                                 help: __(
                                     'Use one or more Meta Box fields as additional filters.',
-                                    'gb-query-filters'
+                                    'gb-query-filter'
                                 ),
                                 className: 'gbqf-control-full',
                             } ),
@@ -655,7 +655,7 @@
                                         { className: 'gbqf-control-helper' },
                                         __(
                                             'Add one or more Meta Box fields to use as filters.',
-                                            'gb-query-filters'
+                                            'gb-query-filter'
                                         )
                                     ),
                                     el(
@@ -673,7 +673,7 @@
                                             },
                                             className: 'gbqf-control-full',
                                         },
-                                        __( '+ Add Meta Box field', 'gb-query-filters' )
+                                        __( '+ Add Meta Box field', 'gb-query-filter' )
                                     )
                                 )
                         ),
@@ -681,16 +681,16 @@
                     acfIntegrationEnabled &&
                         el(
                             PanelBody,
-                            { title: __( 'ACF Filters', 'gb-query-filters' ), initialOpen: false },
+                            { title: __( 'ACF Filters', 'gb-query-filter' ), initialOpen: false },
                             el( ToggleControl, {
                                 __nextHasNoMarginBottom: true,
-                                label: __( 'Enable ACF Field Filters', 'gb-query-filters' ),
+                                label: __( 'Enable ACF Field Filters', 'gb-query-filter' ),
                                 checked: enableAcfFilter,
                                 onChange: ( checked ) =>
                                     setAttributes( { enableAcfFilter: checked } ),
                                 help: __(
                                     'Use one or more Advanced Custom Fields as additional filters.',
-                                    'gb-query-filters'
+                                    'gb-query-filter'
                                 ),
                                 className: 'gbqf-control-full',
                             } ),
@@ -703,7 +703,7 @@
                                         { className: 'gbqf-control-helper' },
                                         __(
                                             'Add one or more ACF fields to use as filters.',
-                                            'gb-query-filters'
+                                            'gb-query-filter'
                                         )
                                     ),
                                     el(
@@ -721,7 +721,7 @@
                                             },
                                             className: 'gbqf-control-full',
                                         },
-                                        __( '+ Add ACF field', 'gb-query-filters' )
+                                        __( '+ Add ACF field', 'gb-query-filter' )
                                     )
                                 )
                         ),
@@ -743,7 +743,7 @@
                         } )
                         : __(
                             'Preview unavailable (ServerSideRender not present).',
-                            'gb-query-filters'
+                            'gb-query-filter'
                         )
                 )
             );
