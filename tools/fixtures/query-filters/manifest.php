@@ -33,7 +33,15 @@
  */
 
 return array(
-	'version' => 1,
+	/*
+	 * v2 adds the `classmatch` loop. Every v1 loop is claimed (or not) by HTML
+	 * ID, which hides a whole half of the rule: `Targeting` matches by
+	 * registered id OR by the registered targetId appearing as a class, and
+	 * only the class half can make the matched TARGET KEY differ from the
+	 * loop's own id. That difference is what decides which URL namespace
+	 * Params reads, so v1 could not see it at all.
+	 */
+	'version' => 2,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
@@ -101,6 +109,29 @@ return array(
 			'class'  => 'gbqf-target-orphan',
 			'expect' => 'open question — passes should_apply_to_attributes() on the legacy class prefix, but get_matched_target() has no entry for it',
 		),
+
+		/*
+		 * v2. Claimed by CLASS, and deliberately carrying an HTML id that is
+		 * NOT the target name.
+		 *
+		 * That gap is the whole point. A filter block registers targetId
+		 * 'gbqf-alias' and renders its form fields as gbqf[gbqf-alias][...].
+		 * The loop matches because 'gbqf-alias' is one of its classes — but its
+		 * own id is 'gbqf-loop-classmatch'. If the code that picks the Params
+		 * scope re-derives an id from the LOOP instead of using the matched
+		 * TARGET KEY, it reads gbqf[gbqf-loop-classmatch][...], which nothing
+		 * ever writes, and the filter silently does nothing.
+		 *
+		 * Every v1 loop matched by id, where the two happen to be equal, so
+		 * this is the first fixture that can tell them apart.
+		 */
+		'classmatch' => array(
+			'id'     => 'gbqf-loop-classmatch',
+			'marker' => 'GBQFX-CLASSMATCH',
+			'class'  => 'gbqf-alias',
+			'target' => 'gbqf-alias',
+			'expect' => 'open question — scoped match by class; does Params read the target key or the loop id?',
+		),
 	),
 
 	/*
@@ -116,5 +147,8 @@ return array(
 	'filter_blocks' => array(
 		array( 'target_id' => '' ),
 		array( 'target_id' => 'gbqf-loop-scoped' ),
+		// v2. Names a CLASS on the classmatch loop, never an HTML id on the
+		// page — so it can only ever be matched by the class rule.
+		array( 'target_id' => 'gbqf-alias' ),
 	),
 );

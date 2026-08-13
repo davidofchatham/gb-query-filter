@@ -22,7 +22,7 @@ So the split is deliberate:
 
 ## The fixture
 
-One page, `/gbqf-targeting/`, with four Query Loops over the same four posts.
+One page, `/gbqf-targeting/`, with five Query Loops over the same four posts.
 They differ only in how a filter block claims them, so a difference in the
 rendered result set is attributable to the targeting rule and nothing else.
 
@@ -32,6 +32,12 @@ rendered result set is attributable to the targeting rule and nothing else.
 | `unscoped` | a filter block with `targetId ''` | open question |
 | `scoped` | a filter block naming its id | filtered by its own scoped params |
 | `legacy` | nothing, but carries `gbqf-target-orphan` | open question |
+| `classmatch` (v2) | a filter block naming one of its **classes** | open question |
+
+`classmatch` exists because every other loop is claimed by HTML ID, where the
+matched **target key** and the **loop's own id** happen to be equal — so v1
+could not tell which of the two the code actually uses. Here they differ on
+purpose: target `gbqf-alias`, loop id `gbqf-loop-classmatch`.
 
 Each loop emits `<MARKER>::<post title>` per row, so a rendered row count is a
 substring count and never an HTML parse. The search term is `Bravo`, which
@@ -41,17 +47,26 @@ unexpected count worth stopping on rather than interpreting.
 
 ## Current result
 
-**§4 fails, and the failure is real.** The `legacy` loop — which no filter block
-targets — is filtered by flat `?gbqf_search=` params. `should_apply_to_attributes()`
-accepts the `gbqf-target-` class prefix without checking that anything registered
-that name; `get_matched_target()` has no such rule and returns a `scoped=false`
-struct, so `Params` reads the flat namespace. Invariant 2 does not hold.
+Measured on `testbed` (GenerateBlocks 2.4.0, scope `targeted`), blueprint v2:
+**2 failed, 23 passed**. Both failures trace to the same root — the targeting
+decision is derived more than once, from more than one place.
 
-Measured on `testbed` (GenerateBlocks 2.4.0, scope `targeted`): 1 failed, 16 passed.
+**§4 — security invariant 2 is violated.** The `legacy` loop, which no filter
+block targets, is filtered by flat `?gbqf_search=` params.
+`should_apply_to_attributes()` accepts the `gbqf-target-` class prefix without
+checking that anything registered that name; `get_matched_target()` has no such
+rule and returns a `scoped=false` struct, so `Params` reads the flat namespace.
 
-Sections 1 and 3 pass — scoped targeting works and forged params for an
-unregistered target are correctly ignored — which is what makes §4 attributable
-to the targeting rule rather than to the plugin being broken generally.
+**§5 — class-based scoped matching never filters.** The `classmatch` loop is
+claimed by class, but [`class-gbqf-filters.php:416`](../../../includes/class-gbqf-filters.php#L416)
+takes the `Params` scope from the **loop's own id** rather than the **matched
+target key**. The form writes `gbqf[gbqf-alias][…]`; the query reads
+`gbqf[gbqf-loop-classmatch][…]`, which nothing writes. Silent no-op.
+
+Sections 1 and 3 pass — scoped targeting works by id, and forged params for an
+unregistered target are correctly ignored — which is what makes §4 and §5
+attributable to the targeting rule rather than to the plugin being broken
+generally.
 
 ## Running it
 

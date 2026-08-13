@@ -219,6 +219,10 @@ $content = implode( "\n\n", array(
 
 	'<!-- wp:heading --><h2 class="wp-block-heading">4. legacy — gbqf-target-* class, no filter block names it</h2><!-- /wp:heading -->',
 	$loop_markup( $loops['legacy']['id'], $loops['legacy']['class'], $loops['legacy']['marker'], $post_slugs, 'gbqflgc0' ),
+
+	'<!-- wp:heading --><h2 class="wp-block-heading">5. classmatch — filter block targets a CLASS, loop id differs</h2><!-- /wp:heading -->',
+	$filter_markup( $manifest['filter_blocks'][2]['target_id'] ),
+	$loop_markup( $loops['classmatch']['id'], $loops['classmatch']['class'], $loops['classmatch']['marker'], $post_slugs, 'gbqfcls0' ),
 ) );
 
 $page_spec = $manifest['page'];

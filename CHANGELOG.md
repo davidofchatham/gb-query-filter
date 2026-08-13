@@ -28,6 +28,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   anything registered that name, and `Filters::get_matched_target()` has no matching rule, so it
   returns a `scoped=false` struct and `Params` reads the flat namespace. Not yet fixed — the
   blueprint is committed failing so the fix has a test that predates it.
+- **Class-based scoped targeting never filters** (`render-surface.sh` §5 fails, added in blueprint
+  v2). A Query Loop claimed by *class* rather than by HTML ID never receives its scoped params:
+  `Filters::apply_filters_to_gb_query()` takes the `Params` scope from the loop's own id instead of
+  the matched target key, so the form writes `gbqf[<target>][…]` while the query reads
+  `gbqf[<loop-id>][…]`. Silent no-op. Same root cause as the above — the targeting decision is
+  derived in more than one place.
 
 ---
 

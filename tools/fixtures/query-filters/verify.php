@@ -95,11 +95,24 @@ if ( ! $pages ) {
 		? $ok( "legacy loop carries class {$legacy['class']}" )
 		: $bad( "legacy loop class {$legacy['class']} missing — section 4 of the harness would be vacuous" );
 
-	// Exactly two filter blocks, one unscoped and one scoped.
-	$filter_count = substr_count( $content, 'wp:gbqf/query-filter' );
-	2 === $filter_count
-		? $ok( 'page carries exactly 2 filter blocks' )
-		: $bad( "page carries {$filter_count} filter blocks, expected 2" );
+	// Exactly three filter blocks: unscoped, scoped-by-id, scoped-by-class.
+	$expected_filters = count( $manifest['filter_blocks'] );
+	$filter_count     = substr_count( $content, 'wp:gbqf/query-filter' );
+	$expected_filters === $filter_count
+		? $ok( "page carries exactly {$expected_filters} filter blocks" )
+		: $bad( "page carries {$filter_count} filter blocks, expected {$expected_filters}" );
+
+	// v2: the class-match pair. The target name must appear as a CLASS on the
+	// classmatch loop and must NOT be its id — if they were equal the loop
+	// would match by id and section 5 of the harness would prove nothing.
+	$cm = $manifest['loops']['classmatch'];
+	false !== strpos( $content, '"targetId":"' . $cm['target'] . '"' )
+		? $ok( "class-match filter block targets {$cm['target']}" )
+		: $bad( "no filter block targets {$cm['target']}" );
+
+	$cm['target'] !== $cm['id']
+		? $ok( "classmatch loop id ({$cm['id']}) differs from its target name ({$cm['target']}) — the gap is real" )
+		: $bad( 'classmatch loop id equals its target name — section 5 would match by id and prove nothing' );
 
 	false !== strpos( $content, '"targetId":"' . $manifest['loops']['scoped']['id'] . '"' )
 		? $ok( 'scoped filter block targets ' . $manifest['loops']['scoped']['id'] )

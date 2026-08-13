@@ -79,6 +79,7 @@ M_CONTROL='GBQFX-CONTROL'
 M_UNSCOPED='GBQFX-UNSCOPED'
 M_SCOPED='GBQFX-SCOPED'
 M_LEGACY='GBQFX-LEGACY'
+M_CLASSMATCH='GBQFX-CLASSMATCH'   # v2
 
 # Resolve the vhost domain from the OLS config, the same source bin/hosts.ps1
 # and bin/smoke.sh read, so the URL can never drift from what OLS serves.
@@ -165,12 +166,12 @@ esac
 
 # All four loops must render all four posts with no filter applied. If any loop
 # is short here, the fixture is wrong and every later count is uninterpretable.
-for pair in "${M_CONTROL}:control" "${M_UNSCOPED}:unscoped" "${M_SCOPED}:scoped" "${M_LEGACY}:legacy"; do
+for pair in "${M_CONTROL}:control" "${M_UNSCOPED}:unscoped" "${M_SCOPED}:scoped" "${M_LEGACY}:legacy" "${M_CLASSMATCH}:classmatch"; do
     marker="${pair%%:*}"; name="${pair##*:}"
     n=$(rows "${BASE}" "${marker}")
-    [ "${n}" = "4" ] || err "loop '${name}' rendered ${n} rows unfiltered, expected 4 — reseed the blueprint before trusting anything below."
+    [ "${n}" = "4" ] || err "loop '${name}' rendered ${n} rows unfiltered, expected 4 — reseed the blueprint (v2+) before trusting anything below."
 done
-ok 'all four loops render 4 rows with no filter params'
+ok 'all five loops render 4 rows with no filter params'
 
 # The filter form itself must be on the page, or the unscoped/scoped sections
 # are testing a page with no filter blocks on it.
@@ -192,10 +193,11 @@ echo "1. scoped filter block, scoped params (the happy path)"
 SCOPED=$(fetch 'gbqf%5Bgbqf-loop-scoped%5D%5Bsearch%5D=Bravo' || true)
 [ -n "${SCOPED}" ] || err 'empty response for the scoped request'
 
-expect "${SCOPED}" "${M_SCOPED}"   1 'scoped loop filters on its own scoped params'
-expect "${SCOPED}" "${M_CONTROL}"  4 'control loop untouched by another loop scoped params'
-expect "${SCOPED}" "${M_UNSCOPED}" 4 'unscoped loop untouched by another loop scoped params'
-expect "${SCOPED}" "${M_LEGACY}"   4 'legacy loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_SCOPED}"     1 'scoped loop filters on its own scoped params'
+expect "${SCOPED}" "${M_CONTROL}"    4 'control loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_UNSCOPED}"   4 'unscoped loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_LEGACY}"     4 'legacy loop untouched by another loop scoped params'
+expect "${SCOPED}" "${M_CLASSMATCH}" 4 'classmatch loop untouched by another loop scoped params'
 
 # ---------------------------------------------------------------------------
 # 2. Unscoped filter block, flat params — CHARACTERIZATION.
@@ -228,8 +230,9 @@ else
     bad "unscoped loop rendered ${n_uns} rows on flat params — expected 4 (inert) or 1 (filtered)"
 fi
 
-expect "${FLAT}" "${M_CONTROL}" 4 'control loop untouched by flat params'
-expect "${FLAT}" "${M_SCOPED}"  4 'scoped loop untouched by flat params (it reads its own namespace)'
+expect "${FLAT}" "${M_CONTROL}"    4 'control loop untouched by flat params'
+expect "${FLAT}" "${M_SCOPED}"     4 'scoped loop untouched by flat params (it reads its own namespace)'
+expect "${FLAT}" "${M_CLASSMATCH}" 4 'classmatch loop untouched by flat params'
 
 # ---------------------------------------------------------------------------
 # 3. Scoped params naming a loop that no filter block targets.
@@ -243,10 +246,11 @@ echo "3. scoped params for an unregistered target (invariant 2)"
 FORGED=$(fetch 'gbqf%5Bgbqf-loop-control%5D%5Bsearch%5D=Bravo' || true)
 [ -n "${FORGED}" ] || err 'empty response for the forged request'
 
-expect "${FORGED}" "${M_CONTROL}"  4 'control loop ignores params forged in its own name'
-expect "${FORGED}" "${M_UNSCOPED}" 4 'unscoped loop ignores forged params'
-expect "${FORGED}" "${M_SCOPED}"   4 'scoped loop ignores forged params'
-expect "${FORGED}" "${M_LEGACY}"   4 'legacy loop ignores forged params'
+expect "${FORGED}" "${M_CONTROL}"    4 'control loop ignores params forged in its own name'
+expect "${FORGED}" "${M_UNSCOPED}"   4 'unscoped loop ignores forged params'
+expect "${FORGED}" "${M_SCOPED}"     4 'scoped loop ignores forged params'
+expect "${FORGED}" "${M_LEGACY}"     4 'legacy loop ignores forged params'
+expect "${FORGED}" "${M_CLASSMATCH}" 4 'classmatch loop ignores forged params'
 
 # ---------------------------------------------------------------------------
 # 4. Legacy gbqf-target-* class on an UNCLAIMED loop — the one that matters.
@@ -286,14 +290,57 @@ fi
 expect "${BASE}" "${M_LEGACY}" 4 'legacy-class loop unaffected with no params present'
 
 # ---------------------------------------------------------------------------
-# 5. Accessibility of the rendered filter form (ADR-0003).
+# 5. Scoped match by CLASS, where the loop id differs from the target name.
+#    (blueprint v2)
+#
+# The filter block registers targetId 'gbqf-alias' and renders its form fields
+# as gbqf[gbqf-alias][...]. The loop matches because 'gbqf-alias' is one of its
+# classes — but the loop's own HTML id is 'gbqf-loop-classmatch'.
+#
+# So the two identities diverge, and which one is handed to Params decides
+# whether the filter works: the matched TARGET KEY ('gbqf-alias') reads the
+# namespace the form actually writes; the LOOP's id reads
+# gbqf[gbqf-loop-classmatch][...], which nothing ever writes.
+#
+# Every section above matches by id, where the two are equal, so this is the
+# first assertion that can tell them apart. Written before the answer was known.
+#
+# 4 rows here is NOT "correctly declined" — the loop IS claimed, by class, and
+# section 0 already proved it renders. 4 rows means claimed-but-unfiltered.
+# ---------------------------------------------------------------------------
+echo ""
+echo "5. scoped match by class, loop id differs from target name (v2)"
+
+ALIAS=$(fetch 'gbqf%5Bgbqf-alias%5D%5Bsearch%5D=Bravo' || true)
+[ -n "${ALIAS}" ] || err 'empty response for the class-match request'
+
+n_cm=$(rows "${ALIAS}" "${M_CLASSMATCH}")
+if [ "${n_cm}" = "1" ]; then
+    ok 'class-matched loop filters on its target scoped params (1 row)'
+elif [ "${n_cm}" = "4" ]; then
+    bad "class-matched loop NOT filtered (4 rows) — the loop is claimed by class but its scoped params did not reach it."
+    note 'the Params scope is being taken from the LOOP id, not the matched target key:'
+    note '  includes/class-gbqf-filters.php:416 re-derives an id from the loop attributes'
+    note "  form writes gbqf[gbqf-alias][...], query reads gbqf[gbqf-loop-classmatch][...]"
+else
+    bad "class-matched loop rendered ${n_cm} rows — expected 1 (works) or 4 (namespace mismatch)"
+fi
+
+# Nothing else may move on this request.
+expect "${ALIAS}" "${M_CONTROL}"  4 'control loop untouched by class-match params'
+expect "${ALIAS}" "${M_SCOPED}"   4 'scoped loop untouched by class-match params'
+expect "${ALIAS}" "${M_UNSCOPED}" 4 'unscoped loop untouched by class-match params'
+expect "${ALIAS}" "${M_LEGACY}"   4 'legacy loop untouched by class-match params'
+
+# ---------------------------------------------------------------------------
+# 6. Accessibility of the rendered filter form (ADR-0003).
 #
 # Cheap to check here because the form is already in the body, and the a11y
 # target is a hard gate on any control this plugin renders. Not a full audit —
 # see .scratch/accessibility-audit/issues/01-baseline-wcag-audit.md.
 # ---------------------------------------------------------------------------
 echo ""
-echo "5. filter form accessibility (ADR-0003, spot checks)"
+echo "6. filter form accessibility (ADR-0003, spot checks)"
 
 case "${BASE}" in
     *'<label for="gbqf_search_input"'*) ok 'search input has an associated label' ;;
@@ -306,6 +353,8 @@ esac
 # in the ACF field branch, and this blueprint's filter blocks enable search
 # only. So a zero count here is VACUOUS — it means the branch never rendered,
 # not that it is sound. Say so rather than bank a pass that was never at risk.
+# (Numbered 5 through blueprint v1; renumbered to 6 in v2, when the class-match
+# section took 5.)
 # Covering it needs an ACF-enabled filter block, which needs a seeded ACF field
 # group; that is a blueprint v2 concern.
 bare=$(printf '%s' "${BASE}" | grep -o '<label>' | wc -l | tr -d ' ' || true)
