@@ -6,11 +6,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
-
----
-
-## [0.4.0] — 2026-08-13
+## [0.4.0] — Unreleased
 
 ### Security
 - **A Query Loop that no filter block targets could be filtered from the URL.** Any loop carrying a
