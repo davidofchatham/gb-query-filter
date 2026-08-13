@@ -6,34 +6,75 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [0.4.0] — 2026-08-13
+
+### Security
+- **A Query Loop that no filter block targets could be filtered from the URL.** Any loop carrying a
+  class matching `gbqf-target-*` passed the gate without any check that a filter block had
+  registered that name, and was then filtered by flat `?gbqf_search=` (and sibling) parameters.
+  This broke security invariant 2 in [CONTEXT.md](CONTEXT.md) — "no filtering an unconnected loop" —
+  and the intent of [ADR-0001](docs/adr/0001-targeted-scope-default.md).
+
+  The legacy `gbqf-target-*` branch is **removed**. It protected nothing: upstream never gated on it
+  (`should_apply_to_attributes()` returned `true` unconditionally), the only written form of the
+  convention was a stale docblock naming a bare `gbqf-target` class that the `gbqf-target-` prefix
+  does not even match, and the check was introduced by this fork in 0.2.0. A loop is now claimed
+  only by a **registered** HTML ID or a **registered** target name appearing as one of its classes.
+
+- **An unrecognised filter scope failed open.** Any scope value other than `all` or `targeted` — a
+  typo in a `gbqf_filter_scope` callback, a stale `data-gbqf-scope` attribute — fell through to
+  "apply to every Query Loop", reinstating exactly the blanket behaviour ADR-0001 forbids. Unknown
+  scope values are now treated as `targeted` (fail closed).
+
+### Fixed
+- **Class-based scoped targeting never filtered anything.** A Query Loop claimed by *class* rather
+  than by HTML ID received no filter state: the `Params` scope was taken from the loop's own id
+  instead of the matched target key, so the filter form wrote `gbqf[<target>][…]` while the query
+  read `gbqf[<loop-id>][…]`. Silent no-op, no error. Callers are now handed a `Target` carrying the
+  registered key and have no means to re-derive an id, so the mistake is not expressible.
 
 ### Added
+- **`Targeting` and `Target`** ([includes/class-gbqf-targeting.php](includes/class-gbqf-targeting.php),
+  [includes/class-gbqf-target.php](includes/class-gbqf-target.php)). `Targeting::match( $attributes )`
+  returns a `Target` or `null` — one question, one answer, one place. It replaces a gate
+  (`should_apply_to_attributes()`) and a separate lookup (`get_matched_target()`) that walked the
+  same match chain independently and disagreed, plus a third re-derivation of the loop id in the
+  caller. Both defects above were consequences of that split; neither is expressible now.
+
+  `Targeting` owns the registry, the scope decision, the per-block `data-gbqf-*` overrides and the
+  `gbqf_should_apply_to_block` filter. `Filters` sheds ~180 lines and keeps query mutation.
+
 - **`query-filters` fixture blueprint** (`tools/fixtures/query-filters/`) — the first automated
-  coverage of the targeting rule ([ADR-0001](docs/adr/0001-targeted-scope-default.md), security
-  invariant 2). One page, four Query Loops over the same posts, differing only in how a filter block
-  claims them. Dev-only; excluded from the distributable ZIP via `.distignore`.
+  coverage of the targeting rule. One page, five Query Loops over the same posts, differing only in
+  how a filter block claims them, so any difference in the rendered result set is attributable to
+  the targeting rule and nothing else. Dev-only; excluded from the distributable ZIP.
 
-  Split into `verify.php` (fixtures are real) and `render-surface.sh` (behaviour, over real HTTP)
-  because wp-cli is structurally blind here: `Filters::register_target()` runs from the filter
-  block's `render_callback` and the targeting decision runs inside
-  `generateblocks_query_wp_query_args` during a render, so under wp-cli every "this loop was not
-  filtered" check passes vacuously.
+  Both defects above were **committed as failing tests before being fixed**, so "this was broken and
+  now is not" is a diff between two runs rather than an assertion. Against 0.3.0 the blueprint
+  reports 2 failed / 23 passed; against this release, 25 passed.
 
-### Known issues
-- **Security invariant 2 is violated** (`render-surface.sh` §4 fails; measured on GenerateBlocks
-  2.4.0 with scope `targeted`). A Query Loop carrying a `gbqf-target-*` class that **no filter block
-  targets** is filtered by flat `?gbqf_search=` URL params.
-  `Filters::should_apply_to_attributes()` accepts the legacy class prefix without checking that
-  anything registered that name, and `Filters::get_matched_target()` has no matching rule, so it
-  returns a `scoped=false` struct and `Params` reads the flat namespace. Not yet fixed — the
-  blueprint is committed failing so the fix has a test that predates it.
-- **Class-based scoped targeting never filters** (`render-surface.sh` §5 fails, added in blueprint
-  v2). A Query Loop claimed by *class* rather than by HTML ID never receives its scoped params:
-  `Filters::apply_filters_to_gb_query()` takes the `Params` scope from the loop's own id instead of
-  the matched target key, so the form writes `gbqf[<target>][…]` while the query reads
-  `gbqf[<loop-id>][…]`. Silent no-op. Same root cause as the above — the targeting decision is
-  derived in more than one place.
+  Split into `verify.php` (the fixtures are real) and `render-surface.sh` (behaviour, over real
+  HTTP) because wp-cli is structurally blind here: registration happens in the filter block's
+  `render_callback` and the targeting decision inside `generateblocks_query_wp_query_args` during a
+  render. Under wp-cli neither fires, so every "this loop was not filtered" check passes vacuously.
+
+### Changed
+- Flat (`gbqf_*`) URL parameters are reachable **only** under the legacy `all` scope, or when a
+  Query Loop is force-enabled. Under the default `targeted` scope an unscoped filter block claims
+  nothing, so its flat parameters reach no loop. This is not new behaviour — it is ADR-0001 working
+  as designed — but CONTEXT.md previously described flat mode as a generally supported
+  backward-compatible mode, which it is not.
+
+### Deprecated
+- `Filters::register_target()` — use `Targeting::register()`. The old method still forwards and
+  emits a deprecation notice; it will be removed in a future release.
+
+### Removed
+- `Filters::should_apply_to_attributes()`, `Filters::get_matched_target()`, `Filters::is_targeted()`,
+  `Filters::get_block_id_from_attributes()`, `Filters::class_contains()` and
+  `Filters::get_block_override()` (all `protected`, undocumented). Their behaviour lives in
+  `Targeting`, mostly as private methods — `get_block_id_from_attributes()` in particular is now
+  unreachable from callers by design, since its reachability is what caused the class-match defect.
 
 ---
 

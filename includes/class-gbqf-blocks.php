@@ -419,8 +419,12 @@ class Blocks {
         // -----------------------
         // REGISTER TARGET & FORM FIELD NAME SETUP
         // -----------------------
-        // Register this filter block so the Filters class knows its scope and field ownership.
-        \GBQF\Filters::register_target( $target_id, [
+        // Register this filter block so Targeting knows its scope and field
+        // ownership. This runs at FILTER BLOCK render time, and Targeting::match()
+        // runs later, at Query Loop render time — so a filter block must appear
+        // before its loop in the document or the registry is still empty when
+        // the loop asks.
+        \GBQF\Targeting::register( $target_id, [
             'scoped'     => ! empty( $target_id ),
             'mb_fields'  => $mb_field_ids,
             'acf_fields' => $acf_field_names,

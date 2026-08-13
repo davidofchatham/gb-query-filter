@@ -64,6 +64,8 @@ final class Plugin {
     private function includes() {
         require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-settings.php';
         require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-params.php';
+        require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-target.php';
+        require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-targeting.php';
         require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-blocks.php';
         require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-filters.php';
     }
