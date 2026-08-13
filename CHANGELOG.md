@@ -6,6 +6,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- **`query-filters` fixture blueprint** (`tools/fixtures/query-filters/`) — the first automated
+  coverage of the targeting rule ([ADR-0001](docs/adr/0001-targeted-scope-default.md), security
+  invariant 2). One page, four Query Loops over the same posts, differing only in how a filter block
+  claims them. Dev-only; excluded from the distributable ZIP via `.distignore`.
+
+  Split into `verify.php` (fixtures are real) and `render-surface.sh` (behaviour, over real HTTP)
+  because wp-cli is structurally blind here: `Filters::register_target()` runs from the filter
+  block's `render_callback` and the targeting decision runs inside
+  `generateblocks_query_wp_query_args` during a render, so under wp-cli every "this loop was not
+  filtered" check passes vacuously.
+
+### Known issues
+- **Security invariant 2 is violated** (`render-surface.sh` §4 fails; measured on GenerateBlocks
+  2.4.0 with scope `targeted`). A Query Loop carrying a `gbqf-target-*` class that **no filter block
+  targets** is filtered by flat `?gbqf_search=` URL params.
+  `Filters::should_apply_to_attributes()` accepts the legacy class prefix without checking that
+  anything registered that name, and `Filters::get_matched_target()` has no matching rule, so it
+  returns a `scoped=false` struct and `Params` reads the flat namespace. Not yet fixed — the
+  blueprint is committed failing so the fix has a test that predates it.
+
+---
+
 ## [0.3.0] — 2026-08-13
 
 ### Changed

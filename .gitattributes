@@ -1,0 +1,9 @@
+# Shell scripts must check out with LF, on every platform.
+#
+# Not cosmetic. tools/fixtures/query-filters/render-surface.sh runs inside WSL
+# against the wp-litespeed env; with CRLF the trailing \r rides into the sed
+# pattern that resolves the OpenLiteSpeed vhost, the match fails, and the script
+# aborts with "no vhost for site 'testbed'" — which reads as broken
+# infrastructure rather than a line-ending problem. Cost one wrong diagnosis
+# already.
+*.sh text eol=lf
