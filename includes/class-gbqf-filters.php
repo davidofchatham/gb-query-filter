@@ -188,7 +188,7 @@ class Filters {
      * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
      * @return array[] Array of [ 'key' => string, 'value' => string ].
      */
-    protected function get_meta_filters( $allowed_field_names = [], $raw_meta ) {
+    protected function get_meta_filters( $allowed_field_names = [], $raw_meta = [] ) {
         if ( ! $this->meta_box_enabled ) {
             return [];
         }
@@ -240,7 +240,7 @@ class Filters {
      * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
      * @return array[] Array of [ 'key' => string, 'value' => string|array, 'compare' => string ].
      */
-    protected function get_acf_filters( $allowed_field_names = [], $raw_meta ) {
+    protected function get_acf_filters( $allowed_field_names = [], $raw_meta = [] ) {
         if ( ! $this->acf_enabled ) {
             return [];
         }

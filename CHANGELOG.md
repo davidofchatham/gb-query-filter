@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.1] — 2026-08-13
+
+### Fixed
+- Block now registers with `apiVersion` / `api_version` 3, clearing the WordPress 6.9
+  "Block with API version 2 or lower is deprecated" console warning and making the block
+  iframe-editor compatible. The editor preview is wrapped in a `useBlockProps()` element so
+  block selection works inside the iframe.
+- PHP 8 deprecation emitted on every request (including every WP-CLI call): optional parameter
+  `$allowed_field_names` was declared before required `$raw_meta` in `Filters::get_meta_filters()`
+  and `Filters::get_acf_filters()`. Both now default to `[]`.
+
+- Editor control deprecation warnings ("36px default size ... is deprecated since version 6.8"):
+  all `TextControl`, `SelectControl`, `ComboboxControl` and `FormTokenField` instances now opt in
+  via `__next40pxDefaultSize`, and all of those plus `ToggleControl` via `__nextHasNoMarginBottom`.
+
+### Changed
+- Editor script dependencies: `wp-editor` → `wp-block-editor`, added `wp-server-side-render`
+  so `ServerSideRender` resolves from its own package rather than the deprecated
+  `wp.components` alias.
+- Removed a dead hidden `TextControl` in the Additional Taxonomies panel that rendered with
+  `display: none` and a no-op `onChange` — the adjacent `FormTokenField` already carries the label.
+
+---
+
 ## [0.2.0] — 2026-06-15
 
 All changes in this release were developed on top of the upstream 0.1.2 baseline.

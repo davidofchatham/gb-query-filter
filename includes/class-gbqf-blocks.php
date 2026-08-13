@@ -39,7 +39,7 @@ class Blocks {
         wp_register_script(
             'gbqf-query-filter-block',
             GBQF_PLUGIN_URL . 'assets/js/gbqf-query-filter-block.js',
-            [ 'wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-i18n' ],
+            [ 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n', 'wp-server-side-render' ],
             GBQF_VERSION,
             true
         );
@@ -76,6 +76,7 @@ class Blocks {
         register_block_type(
             'gbqf/query-filter',
             [
+                'api_version'     => 3,
                 'editor_script'   => 'gbqf-query-filter-block',
                 'style'           => 'gbqf-frontend',
                 'editor_style'    => [ 'gbqf-frontend', 'gbqf-editor' ],
