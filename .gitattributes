@@ -7,3 +7,7 @@
 # infrastructure rather than a line-ending problem. Cost one wrong diagnosis
 # already.
 *.sh text eol=lf
+
+# PHP follows WordPress coding standards (tabs); LF keeps phpcs and diffs
+# identical on every platform.
+*.php text eol=lf
