@@ -19,6 +19,7 @@ Two things need separating, and the original version of this ADR conflated them:
 
 - Any control or rendered output that this work *adds or modifies* must meet current WCAG AA before it ships. Treat an a11y miss in your own diff like a security miss — a blocker.
 - Practical checklist: every form input has an associated `<label>`; controls without a visible label get an `aria-label`; visually-hidden labels use `.screen-reader-text`; all controls keyboard-navigable with a visible focus indicator; AJAX content updates announce via an ARIA live region; colour contrast meets AA.
+- **Visible labels by default (decided 2026-10-15).** Every control renders a persistent visible label by default. A placeholder is never the only visible label. A visually hidden label is allowed only as an explicit opt-out chosen by the site author, never as the default.
 
 **The existing codebase is unaudited.** No formal WCAG audit has been run against the current plugin. Compliance of code we have not touched is *unverified* — do not assume it conforms, and do not state in docs or release notes that the plugin "is WCAG 2.2 AA compliant." A full baseline audit is a separate, open task (track it as an issue under `.scratch/` per the issue-tracker convention).
 

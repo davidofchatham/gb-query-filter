@@ -23,7 +23,7 @@ Enforcement: sanitize all `$_GET`/`$_POST`/`$_SERVER` input (`sanitize_text_fiel
 
 ## Accessibility (invariant for code you change)
 
-Target the current WCAG AA level (WCAG 2.2 AA as of 2026-06) — see [ADR-0003](docs/adr/0003-accessibility-target-current-wcag-aa.md). This is a hard gate on any control or output you **add or modify**: every form input needs an associated `<label>`; controls without visible labels need `aria-label`; use `.screen-reader-text` for visually-hidden labels; keyboard-navigable with visible focus; ARIA live regions for AJAX content updates; sufficient contrast.
+Target the current WCAG AA level (WCAG 2.2 AA as of 2026-06) — see [ADR-0003](docs/adr/0003-accessibility-target-current-wcag-aa.md). This is a hard gate on any control or output you **add or modify**: every form input needs an associated `<label>`, visible by default (a placeholder is never the only visible label; hiding a label is an explicit author opt-out only); controls without visible labels need `aria-label`; use `.screen-reader-text` for visually-hidden labels; keyboard-navigable with visible focus; ARIA live regions for AJAX content updates; sufficient contrast.
 
 **The existing plugin is unaudited** — no formal WCAG audit has been run, so do not assume untouched code conforms or claim the plugin "is WCAG 2.2 AA compliant." A full baseline audit is a separate open task.
 
