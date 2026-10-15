@@ -25,7 +25,7 @@
  * Manifest owns DATA. Assertions live in render-surface.sh, because every
  * question here is about a RENDERED result set: the targeting decision happens
  * inside `generateblocks_query_wp_query_args` during a real request, and
- * `Filters::register_target()` only runs when a filter block renders. Under
+ * `Targeting::register()` only runs when a filter block renders. Under
  * wp-cli neither fires, so all four loops are indistinguishable there.
  *
  * REQUIRES GenerateBlocks 2.0+ (the `generateblocks/query` block and the

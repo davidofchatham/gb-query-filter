@@ -5,7 +5,7 @@
 # This is the only place the rule is observable at all. wp-cli is structurally
 # blind to it, and not by a little:
 #
-#   * `Filters::register_target()` is called from the filter block's
+#   * `Targeting::register()` is called from the filter block's
 #     render_callback. No render, no registered targets, so the gate
 #     `should_apply_to_attributes()` sees an empty registry and declines every
 #     loop. Under wp-cli that is indistinguishable from a working targeted mode

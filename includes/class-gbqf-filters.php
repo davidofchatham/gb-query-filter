@@ -32,19 +32,6 @@ class Filters {
     protected $acf_enabled;
 
     /**
-     * Register a filter block's target ID and associated field lists.
-     *
-     * @deprecated 0.4.0 Use {@see Targeting::register()}.
-     *
-     * @param string $target_id HTML ID (or class name) of target Query Loop. Empty string for unscoped.
-     * @param array  $args      See Targeting::register().
-     */
-    public static function register_target( $target_id, $args = [] ) {
-        _deprecated_function( __METHOD__, '0.4.0', 'GBQF\Targeting::register' );
-        Targeting::register( $target_id, $args );
-    }
-
-    /**
      * Debug logging helper.
      *
      * @param string $message Message to log.

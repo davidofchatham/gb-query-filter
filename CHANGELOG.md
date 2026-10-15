@@ -9,6 +9,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **Changing a filter from a later page rendered an empty loop.** The AJAX request kept the Query's pagination param (`query-{uniqueId}-page`), so narrowing results from page 3 to a set that fits on one page asked WordPress for a page that no longer exists. A filter change now removes the target Query's page key, and Reset clears it too. Other Queries' pagination on the same page is left alone.
 
+### Removed
+- `Filters::register_target()`, deprecated in 0.4.0. Call `Targeting::register()` instead; `Filters` no longer has any part in target registration.
+
 ## [0.4.0] — 2026-08-13
 
 ### Security
@@ -116,8 +119,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   backward-compatible mode, which it is not.
 
 ### Deprecated
-- `Filters::register_target()` — use `Targeting::register()`. The old method still forwards and
-  emits a deprecation notice; it will be removed in a future release.
+- `Filters::register_target()` — use `Targeting::register()`. The old method forwarded and emitted a deprecation notice; it has since been removed (see the Unreleased section).
 
 ### Removed
 - `Filters::should_apply_to_attributes()`, `Filters::get_matched_target()`, `Filters::is_targeted()`,

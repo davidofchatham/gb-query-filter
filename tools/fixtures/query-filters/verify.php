@@ -3,7 +3,7 @@
  * query-filters blueprint — fixture verifier.
  *
  * Asserts the FIXTURES are real. It does not, and cannot, assert the targeting
- * behaviour: `Filters::register_target()` runs when a filter block renders and
+ * behaviour: `Targeting::register()` runs when a filter block renders and
  * the targeting decision runs inside `generateblocks_query_wp_query_args`
  * during a real request. Under wp-cli neither happens, so all four loops look
  * identical here no matter what the plugin does. That is render-surface.sh's
