@@ -4,7 +4,7 @@ All notable changes to GB Query Filter are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
----
+## [Unreleased]
 
 ## [0.4.0] — 2026-08-13
 
@@ -123,8 +123,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `Targeting`, mostly as private methods — `get_block_id_from_attributes()` in particular is now
   unreachable from callers by design, since its reachability is what caused the class-match defect.
 
----
-
 ## [0.3.0] — 2026-08-13
 
 ### Changed
@@ -149,8 +147,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - README documents the upgrade step this rename requires and points to the release asset rather
   than the repository ZIP.
 
----
-
 ## [0.2.1] — 2026-08-13
 
 ### Fixed
@@ -172,8 +168,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `wp.components` alias.
 - Removed a dead hidden `TextControl` in the Additional Taxonomies panel that rendered with
   `display: none` and a no-op `onChange` — the adjacent `FormTokenField` already carries the label.
-
----
 
 ## [0.2.0] — 2026-06-15
 
@@ -221,8 +215,6 @@ below is collapsed into 0.2.0.
 - `get_block_id_from_attributes()` did not handle GenerateBlocks' `uniqueId` attribute, preventing class-based targeting for GB Query blocks without a manually set HTML ID; added fallback that constructs `gb-query-{uniqueId}`
 - `enableApplyButton` PHP attribute default was `true` (always show Apply button) while the JS block default was `false` (auto-apply mode); PHP default aligned to `false` — auto-apply now works correctly for new blocks
 - Empty form field values (cleared text inputs, "any" select options) were appended to the AJAX request URL, polluting it with `key=` entries; empty values are now skipped when building AJAX params
-
----
 
 ## [0.1.2] — Upstream baseline
 
