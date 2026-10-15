@@ -48,12 +48,12 @@ class Filters {
 			return;
 		}
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging, gated by the debug setting.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging, gated by the gbqf_enable_debug_logging filter.
 		error_log(
 			sprintf(
 				'[GB Query Filter] %s: %s',
 				$message,
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging, gated by the debug setting.
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging, gated by the gbqf_enable_debug_logging filter.
 				print_r( $data, true )
 			)
 		);
