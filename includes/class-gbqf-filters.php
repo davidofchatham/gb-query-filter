@@ -1,4 +1,10 @@
 <?php
+/**
+ * Applies URL-based filters to GenerateBlocks queries.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -42,15 +48,20 @@ class Filters {
 			return;
 		}
 
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging, gated by the debug setting.
 		error_log(
 			sprintf(
 				'[GB Query Filter] %s: %s',
 				$message,
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging, gated by the debug setting.
 				print_r( $data, true )
 			)
 		);
 	}
 
+	/**
+	 * Read integration settings and hook the query filters.
+	 */
 	public function __construct() {
 		$this->meta_box_enabled = Settings::is_metabox_enabled();
 		$this->acf_enabled      = Settings::is_acf_enabled();
@@ -191,6 +202,7 @@ class Filters {
 				foreach ( $value as $single_value ) {
 					$filters[] = array(
 						'key'     => $field_name,
+						// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Matches how WordPress stores array meta values.
 						'value'   => serialize( strval( $single_value ) ),
 						'compare' => 'LIKE',
 					);

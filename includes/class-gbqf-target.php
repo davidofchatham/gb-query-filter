@@ -1,4 +1,10 @@
 <?php
+/**
+ * Value object for a claimed Query Loop.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -56,6 +62,8 @@ final class Target {
 	private $acf_fields;
 
 	/**
+	 * Build a Target. Called by Targeting only.
+	 *
 	 * @param string   $scope_id   Registered target key, or '' for flat mode.
 	 * @param string[] $mb_fields  Meta Box field IDs owned by the filter block.
 	 * @param string[] $acf_fields ACF field names owned by the filter block.

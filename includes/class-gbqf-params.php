@@ -1,4 +1,10 @@
 <?php
+/**
+ * URL parameter reading and construction for one filter scope.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -17,16 +23,30 @@ class Params {
 	/** GenerateBlocks Query pagination key: `query-{uniqueId}-page` (or `query-page` without an id). */
 	const PAGE_KEY_PATTERN = '/^query(?:-.+)?-page$/';
 
-	/** @var string Sanitized target ID; empty string for flat/unscoped mode. */
+	/**
+	 * Sanitized target ID; empty string for flat/unscoped mode.
+	 *
+	 * @var string
+	 */
 	private $target_id;
 
-	/** @var bool True when target_id is non-empty (scoped mode). */
+	/**
+	 * True when target_id is non-empty (scoped mode).
+	 *
+	 * @var bool
+	 */
 	private $is_scoped;
 
-	/** @var array Cached scoped data from $_GET['gbqf'][$target_id], unslashed. Empty if flat or absent. */
+	/**
+	 * Cached scoped data from $_GET['gbqf'][$target_id], unslashed. Empty if flat or absent.
+	 *
+	 * @var array
+	 */
 	private $data;
 
 	/**
+	 * Read this scope's data from the URL.
+	 *
 	 * @param string $target_id Sanitized target ID. Pass '' for flat/unscoped mode.
 	 */
 	public function __construct( $target_id ) {

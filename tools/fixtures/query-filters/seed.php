@@ -1,6 +1,6 @@
 <?php
 /**
- * query-filters blueprint — seed applier.
+ * Query-filters blueprint — seed applier.
  *
  * Idempotent: reads manifest.php, upserts by slug (post_name / term slug).
  * Safe to re-run.
@@ -18,6 +18,8 @@
  * No schema.php and no mu-plugin stub: the only registrations involved are
  * WordPress core's `post` type and `category` taxonomy, which survive a
  * snapshot restore on their own.
+ *
+ * @package GBQF
  */
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -216,19 +218,19 @@ $post_slugs = wp_list_pluck( $manifest['posts'], 'slug' );
 /**
  * One Query Loop over exactly the fixture posts.
  *
- * post_name__in (not a tax_query) selects them: it is the selector the
+ * Selecting by post_name__in (not a tax_query) is the selector the
  * GenerateBlocks fixtures on this stack already use successfully, and it
  * survives GB's own arg mapping. GBQF's search lands as `s` alongside it, and
  * WP_Query ANDs the two — which is precisely the merge behaviour under test.
  *
  * @param string   $id     HTML id, set on the block attribute AND the wrapper.
- * @param string   $class  Extra class for the wrapper (legacy-targeting case).
+ * @param string   $css_class Extra class for the wrapper (legacy-targeting case).
  * @param string   $marker Per-loop string emitted before the post title.
  * @param string[] $slugs  Fixture post slugs.
  * @param string   $uid    Block uniqueId (stable, so re-seeding does not churn).
  * @return string Block markup.
  */
-$loop_markup = function ( $id, $class, $marker, $slugs, $uid ) {
+$loop_markup = function ( $id, $css_class, $marker, $slugs, $uid ) {
 	$query = array(
 		'post_type'      => 'post',
 		'post_name__in'  => array_values( $slugs ),
@@ -244,11 +246,11 @@ $loop_markup = function ( $id, $class, $marker, $slugs, $uid ) {
 		'query'          => $query,
 		'htmlAttributes' => array( 'id' => $id ),
 	);
-	if ( '' !== $class ) {
-		$query_attrs['className'] = $class;
+	if ( '' !== $css_class ) {
+		$query_attrs['className'] = $css_class;
 	}
 
-	$wrapper_class = '' !== $class ? ' class="' . esc_attr( $class ) . '"' : '';
+	$wrapper_class = '' !== $css_class ? ' class="' . esc_attr( $css_class ) . '"' : '';
 
 	return sprintf(
 		'<!-- wp:generateblocks/query %1$s -->' . "\n"
@@ -410,25 +412,21 @@ $paging_query = array(
 );
 
 $paging_markup = sprintf(
-	'<!-- wp:generateblocks/query %1$s -->' . '
-'
-	. '<div id="%2$s" class="gb-query gb-query-%3$s"><!-- wp:generateblocks/looper {"uniqueId":"%3$slp","tagName":"ul"} -->' . '
-'
-	. '<ul><!-- wp:generateblocks/loop-item {"uniqueId":"%3$sli","tagName":"li"} -->' . '
-'
-	. '<li class="gb-loop-item"><!-- wp:generateblocks/text {"uniqueId":"%3$stx","tagName":"p"} -->' . '
-'
-	. '<p class="gb-text">%4$s::{{post_title}}</p>' . '
-'
-	. '<!-- /wp:generateblocks/text --></li>' . '
-'
-	. '<!-- /wp:generateblocks/loop-item --></ul>' . '
-'
-	. '<!-- /wp:generateblocks/looper -->' . '
-'
-	. '<!-- wp:generateblocks/query-page-numbers {"uniqueId":"%3$spn"} /--></div>' . '
-'
-	. '<!-- /wp:generateblocks/query -->',
+	implode(
+		"\n",
+		array(
+			'<!-- wp:generateblocks/query %1$s -->',
+			'<div id="%2$s" class="gb-query gb-query-%3$s"><!-- wp:generateblocks/looper {"uniqueId":"%3$slp","tagName":"ul"} -->',
+			'<ul><!-- wp:generateblocks/loop-item {"uniqueId":"%3$sli","tagName":"li"} -->',
+			'<li class="gb-loop-item"><!-- wp:generateblocks/text {"uniqueId":"%3$stx","tagName":"p"} -->',
+			'<p class="gb-text">%4$s::{{post_title}}</p>',
+			'<!-- /wp:generateblocks/text --></li>',
+			'<!-- /wp:generateblocks/loop-item --></ul>',
+			'<!-- /wp:generateblocks/looper -->',
+			'<!-- wp:generateblocks/query-page-numbers {"uniqueId":"%3$spn"} /--></div>',
+			'<!-- /wp:generateblocks/query -->',
+		)
+	),
 	wp_json_encode( $paging_query ),
 	esc_attr( $paging['id'] ),
 	$pg_uid,

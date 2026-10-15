@@ -1,6 +1,6 @@
 <?php
 /**
- * query-filters blueprint — fixture verifier.
+ * Query-filters blueprint — fixture verifier.
  *
  * Asserts the FIXTURES are real. It does not, and cannot, assert the targeting
  * behaviour: `Targeting::register()` runs when a filter block renders and
@@ -14,6 +14,8 @@
  *
  * Run:
  *   bin/wp.sh <site> eval-file /plugins/gb-query-filter/tools/fixtures/query-filters/verify.php
+ *
+ * @package GBQF
  */
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -163,7 +165,7 @@ foreach ( $manifest['posts'] as $spec ) {
 		)
 	);
 	if ( ! $ids ) {
-		continue; // already reported above
+		continue; // Already reported above.
 	}
 
 	foreach ( $spec['meta'] as $meta_key => $expected ) {

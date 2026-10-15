@@ -1,6 +1,6 @@
 <?php
 /**
- * query-filters blueprint — schema (code, not data).
+ * Query-filters blueprint — schema (code, not data).
  *
  * Registers the two custom fields the v3 assertions filter on: a Meta Box field
  * and an ACF field, both defined once in manifest.php.
@@ -23,6 +23,8 @@
  * real ACF registrations. A fake registry would test the fixture's idea of those
  * plugins rather than GBQF's integration with them, which is the entire point of
  * the two integration branches under test.
+ *
+ * @package GBQF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

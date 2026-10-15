@@ -1,6 +1,6 @@
 <?php
 /**
- * query-filters blueprint — manifest (the data contract).
+ * Query-filters blueprint — manifest (the data contract).
  *
  * Axis: WHICH GenerateBlocks Query Loop a filter block is allowed to touch.
  * That is the subject of [ADR-0001](../../../docs/adr/0001-targeted-scope-default.md)
@@ -30,9 +30,12 @@
  *
  * REQUIRES GenerateBlocks 2.0+ (the `generateblocks/query` block and the
  * `generateblocks_query_wp_query_args` filter). seed.php asserts it.
+ *
+ * @package GBQF
  */
 
 return array(
+
 	/*
 	 * v2 adds the `classmatch` loop. Every v1 loop is claimed (or not) by HTML
 	 * ID, which hides a whole half of the rule: `Targeting` matches by
@@ -41,6 +44,7 @@ return array(
 	 * loop's own id. That difference is what decides which URL namespace
 	 * Params reads, so v1 could not see it at all.
 	 */
+
 	/*
 	 * v3 adds CUSTOM FIELD ownership. v1 and v2 only ever filtered on `search`,
 	 * which every filter block renders unconditionally and which no block
@@ -77,6 +81,7 @@ return array(
 	 * 'Bravo' is the search term used throughout: it appears in exactly one
 	 * title, and as a substring of no other.
 	 */
+
 	/*
 	 * v3 adds `meta` per post: the Meta Box field `gbqf_color` and the ACF field
 	 * `gbqf_size`, stored as plain post meta under their own names (which is
@@ -107,6 +112,7 @@ return array(
 				'gbqf_size'  => 'small',
 			),
 		),
+
 		/*
 		 * v3.1. `_gbqf_undeclared` is the probe for §9's hardest case, and it
 		 * is deliberately unlike the other two: no filter block declares it, no

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Decides which Query Loop a filter block may touch.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -61,6 +67,8 @@ class Targeting {
 	private $scope_override;
 
 	/**
+	 * Create the targeting registry.
+	 *
 	 * @param string|null $scope_override Force a scope, bypassing Settings.
 	 *                                    Leave null in production.
 	 */
@@ -315,10 +323,10 @@ class Targeting {
 	 *
 	 * @param array  $attributes Block attributes.
 	 * @param string $setting    Setting name, without the 'data-gbqf-' prefix.
-	 * @param mixed  $default    Returned when the attribute is absent.
+	 * @param mixed  $fallback   Returned when the attribute is absent.
 	 * @return mixed
 	 */
-	private function block_override( $attributes, $setting, $default = null ) {
+	private function block_override( $attributes, $setting, $fallback = null ) {
 		$attr_key = 'data-gbqf-' . $setting;
 		if ( isset( $attributes[ $attr_key ] ) ) {
 			return $attributes[ $attr_key ];
@@ -330,6 +338,6 @@ class Targeting {
 			return $attributes[ $alt_key ];
 		}
 
-		return $default;
+		return $fallback;
 	}
 }

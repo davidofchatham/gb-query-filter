@@ -1,10 +1,19 @@
 <?php
+/**
+ * Plugin bootstrap: wires the other classes together.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Plugin bootstrap.
+ */
 final class Plugin {
 
 	/**

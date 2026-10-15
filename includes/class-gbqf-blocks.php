@@ -1,17 +1,32 @@
 <?php
+/**
+ * Registers the filter blocks and renders them.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Registers the filter blocks and renders them.
+ */
 class Blocks {
 
+	/**
+	 * Hook block registration and editor assets.
+	 */
 	public function __construct() {
 		add_action( 'init', array( $this, 'register_blocks' ) );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_assets' ) );
 	}
 
+	/**
+	 * Register the filter block and its frontend and editor scripts.
+	 */
 	public function register_blocks() {
 
 		wp_register_script(
@@ -312,6 +327,13 @@ class Blocks {
 		);
 	}
 
+	/**
+	 * Render the Query Filter block.
+	 *
+	 * @param array  $attributes Block attributes.
+	 * @param string $content    Inner content (unused).
+	 * @return string Block markup.
+	 */
 	public function render_query_filter_block( $attributes, $content ) {
 
 		$target_id = isset( $attributes['targetId'] ) ? sanitize_key( $attributes['targetId'] ) : '';
@@ -612,7 +634,7 @@ class Blocks {
 		// -----------------------
 		// LOAD META BOX FIELD DEFINITIONS (registry + fallback)
 		// -----------------------
-		$mb_fields_data = array(); // field_id => [ 'label', 'has_options', 'options', 'selected', 'control_type' ]
+		$mb_fields_data = array(); // Keyed by field ID: label, has_options, options, selected, control_type.
 
 		if ( $enable_mb_filter && ! empty( $effective_mb_fields ) ) {
 
@@ -671,7 +693,7 @@ class Blocks {
 		// -----------------------
 		// LOAD ACF FIELD DEFINITIONS
 		// -----------------------
-		$acf_fields_data = array(); // field_name => [ 'label', 'has_choices', 'choices', 'selected', 'control_type', 'field_type', 'is_multi' ]
+		$acf_fields_data = array(); // Keyed by field name: label, has_choices, choices, selected, control_type, field_type, is_multi.
 
 		if ( $enable_acf_filter && ! empty( $effective_acf_fields ) && function_exists( 'acf_get_field' ) ) {
 
@@ -700,7 +722,7 @@ class Blocks {
 					}
 
 					// Determine if this is a multi-select field type.
-					if ( $field_type === 'checkbox' ) {
+					if ( 'checkbox' === $field_type ) {
 						$is_multi = true;
 					}
 				}
@@ -751,7 +773,7 @@ class Blocks {
 
 		$html .= '<form class="gbqf-filter-form" method="get">';
 
-		// SEARCH FIELD
+		// Search field.
 		if ( $enable_search ) {
 			$html .= '<div class="gbqf-filter-field gbqf-filter-search">';
 			// Label visually hidden, placeholder provides prompt.
@@ -760,7 +782,7 @@ class Blocks {
 			$html .= '</div>';
 		}
 
-		// CATEGORIES FIELD
+		// Categories field.
 		if ( $enable_categories && ! empty( $categories ) ) {
 			$html .= '<div class="gbqf-filter-field gbqf-filter-categories">';
 			$html .= '<span class="gbqf-filter-label">' . esc_html__( 'Categories', 'gb-query-filter' ) . '</span>';
@@ -792,7 +814,7 @@ class Blocks {
 			$html .= '</div>';
 		}
 
-		// TAGS FIELD
+		// Tags field.
 		if ( $enable_tags && ! empty( $tags ) ) {
 			$html .= '<div class="gbqf-filter-field gbqf-filter-tags">';
 			$html .= '<span class="gbqf-filter-label">' . esc_html__( 'Tags', 'gb-query-filter' ) . '</span>';
@@ -824,7 +846,7 @@ class Blocks {
 			$html .= '</div>';
 		}
 
-		// EXTRA TAXONOMIES
+		// Extra taxonomies.
 		if ( ! empty( $extra_taxonomies_data ) ) {
 			foreach ( $extra_taxonomies_data as $slug => $data ) {
 				$tax_obj = $data['object'];
@@ -867,7 +889,7 @@ class Blocks {
 			}
 		}
 
-		// META BOX FIELDS – ONE UI GROUP PER FIELD
+		// Meta Box fields: one UI group per field.
 		if ( $enable_mb_filter && ! empty( $mb_fields_data ) ) {
 			foreach ( $mb_fields_data as $field_id => $field_data ) {
 				$label       = $field_data['label'];
@@ -942,7 +964,7 @@ class Blocks {
 			}
 		}
 
-		// ACF FIELDS – ONE UI GROUP PER FIELD
+		// ACF fields: one UI group per field.
 		if ( $enable_acf_filter && ! empty( $acf_fields_data ) ) {
 			foreach ( $acf_fields_data as $field_name => $field_data ) {
 				$label        = $field_data['label'];
@@ -1051,7 +1073,7 @@ class Blocks {
 			}
 		}
 
-		// ACTIONS
+		// Actions.
 		$html .= '<div class="gbqf-filter-actions">';
 
 		if ( $enable_apply ) {

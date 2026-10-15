@@ -1,10 +1,19 @@
 <?php
+/**
+ * Admin settings page and option accessors.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Admin settings page and option accessors.
+ */
 class Settings {
 
 	const OPTION_KEY     = 'gbqf_enable_metabox_integration';
@@ -154,16 +163,21 @@ class Settings {
 	// Field renderers
 	// ---------------------------------------------------------------------------
 
+	/**
+	 * Render the hook priority field.
+	 */
 	public static function render_field_priority() {
-		$value = absint( get_option( 'gbqf_filter_priority', 20 ) );
 		printf(
 			'<input type="number" id="gbqf_filter_priority" name="gbqf_filter_priority" value="%d" min="1" class="small-text" />
 			<p class="description">%s</p>',
-			$value,
+			absint( get_option( 'gbqf_filter_priority', 20 ) ),
 			esc_html__( 'Controls when GBQF runs relative to other plugins that modify Query Loop queries. Higher numbers run later. Default: 20.', 'gb-query-filter' )
 		);
 	}
 
+	/**
+	 * Render the preserve-search field.
+	 */
 	public static function render_field_preserve_search() {
 		$checked = (bool) get_option( 'gbqf_preserve_search', false );
 		printf(
@@ -175,6 +189,9 @@ class Settings {
 		);
 	}
 
+	/**
+	 * Render the debug logging field.
+	 */
 	public static function render_field_debug_logging() {
 		$checked = (bool) get_option( 'gbqf_enable_debug_logging', false );
 		printf(
@@ -186,10 +203,16 @@ class Settings {
 		);
 	}
 
+	/**
+	 * Render the integrations section intro.
+	 */
 	public static function render_integrations_intro() {
 		echo '<p>' . esc_html__( 'Enable or disable GBQF integration with third-party field plugins.', 'gb-query-filter' ) . '</p>';
 	}
 
+	/**
+	 * Render the Meta Box integration field.
+	 */
 	public static function render_field_metabox() {
 		$checked = self::is_metabox_enabled();
 		printf(
@@ -201,6 +224,9 @@ class Settings {
 		);
 	}
 
+	/**
+	 * Render the ACF integration field.
+	 */
 	public static function render_field_acf() {
 		$checked = self::is_acf_enabled();
 		printf(
@@ -216,6 +242,9 @@ class Settings {
 	// Settings page renderer
 	// ---------------------------------------------------------------------------
 
+	/**
+	 * Render the settings page.
+	 */
 	public static function render_settings_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -241,7 +270,7 @@ class Settings {
 	/**
 	 * Sanitize a hook priority: positive integer, minimum 1.
 	 *
-	 * @param mixed $value
+	 * @param mixed $value Raw submitted value.
 	 * @return int
 	 */
 	public static function sanitize_priority( $value ) {
@@ -252,7 +281,7 @@ class Settings {
 	/**
 	 * Sanitize a boolean option stored as '1' / '0'.
 	 *
-	 * @param mixed $value
+	 * @param mixed $value Raw submitted value.
 	 * @return string '1' or '0'
 	 */
 	public static function sanitize_bool( $value ) {
