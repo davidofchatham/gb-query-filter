@@ -87,6 +87,8 @@ M_UNSCOPED='GBQFX-UNSCOPED'
 M_SCOPED='GBQFX-SCOPED'
 M_LEGACY='GBQFX-LEGACY'
 M_CLASSMATCH='GBQFX-CLASSMATCH'   # v2
+PAGING_PAGE='gbqf-paging'         # v4
+M_PAGING='GBQFX-PAGING'
 
 # Resolve the vhost domain from the OLS config, the same source bin/hosts.ps1
 # and bin/smoke.sh read, so the URL can never drift from what OLS serves.
@@ -120,10 +122,10 @@ echo "recycling lsphp workers (defeats opcache.revalidate_freq=120)"
 docker compose exec -T litespeed bash -c 'killall lsphp 2>/dev/null; true' >/dev/null 2>&1 || true
 sleep 2
 
-# fetch <query-string>  — empty for the unfiltered page.
+# fetch <query-string> [page-slug]  — empty query for the unfiltered page.
 fetch(){
     local qs="${1:-}"
-    local url="https://${MAIN}/${PAGE}/?nocache=${NONCE}"
+    local url="https://${MAIN}/${2:-${PAGE}}/?nocache=${NONCE}"
     [ -n "${qs}" ] && url="${url}&${qs}"
     docker run --rm --network host "${CURL_IMG}" \
         -sS -k --resolve "${MAIN}:443:127.0.0.1" "${url}" 2>/dev/null
@@ -607,6 +609,61 @@ elif [ "${n_hit}" != "${n_miss}" ]; then
     note 'the membership test in get_meta_filters() is not rejecting undeclared keys.'
 else
     bad "undeclared key changed the result set (${n_hit} rows for both values, expected 4)"
+fi
+
+# ---------------------------------------------------------------------------
+# 10. Pagination key vs filter change (blueprint v4).
+#
+# GB pages a Query through `query-{uniqueId}-page`. A filter change must not
+# carry that key forward: page 3 does not exist once a search narrows 4 posts
+# (1 per page) to a single row, and WordPress renders an empty loop for it.
+#
+# The AJAX request itself is built in JS and is not reachable here; this section
+# pins the two things HTTP can see — that the fixture reproduces the stale-page
+# state, and that the server-rendered Reset href drops the key. The JS half
+# (filter change, and the narrowed Reset href) is the manual browser checklist in
+# .scratch/ajax-page-reset/issues/01-reset-page-param-on-filter-change.md.
+# ---------------------------------------------------------------------------
+echo ""
+echo "10. pagination key (page: /${PAGING_PAGE}/)"
+
+PG_KEY='query-gbqfpag0-page'
+PG_SEARCH='gbqf%5Bgbqf-loop-paging%5D%5Bsearch%5D=Bravo'
+
+PG_BASE=$(fetch '' "${PAGING_PAGE}" || true)
+[ -n "${PG_BASE}" ] || err "empty response for /${PAGING_PAGE}/ — reseed the blueprint (v4+)."
+expect "${PG_BASE}" "${M_PAGING}" 1 'paging loop renders 1 of 4 rows per page'
+
+PG_P3=$(fetch "${PG_KEY}=3" "${PAGING_PAGE}" || true)
+expect "${PG_P3}" "${M_PAGING}" 1 'page 3 exists unfiltered (fixture has 4 pages)'
+
+# Precondition, not a plugin assertion: this is the state the bug lands in.
+PG_STALE=$(fetch "${PG_KEY}=3&${PG_SEARCH}" "${PAGING_PAGE}" || true)
+expect "${PG_STALE}" "${M_PAGING}" 0 'precondition: a stale page 3 plus a 1-row search renders an empty loop'
+
+# reset_href <body>  — the first filter block's Reset href, entity-decoded.
+reset_href(){
+    printf '%s' "${1}" | grep -o 'gbqf-filter-reset[^>]*href="[^"]*"' | head -1 \
+        | sed 's/.*href="//; s/"$//; s/&#038;/\&/g; s/&amp;/\&/g' || true
+}
+
+PG_RESET=$(reset_href "${PG_STALE}")
+if [ -z "${PG_RESET}" ]; then
+    bad 'no Reset href on the paging page'
+elif printf '%s' "${PG_RESET}" | grep -q 'query-.*-page'; then
+    bad "scoped Reset href keeps the pagination key: ${PG_RESET}"
+else
+    ok 'scoped Reset href drops the pagination key'
+fi
+
+# Flat branch of get_reset_url(): the unscoped block on the targeting page.
+FLAT_RESET=$(reset_href "$(fetch "${PG_KEY}=3&gbqf_search=Bravo" || true)")
+if [ -z "${FLAT_RESET}" ]; then
+    bad 'no Reset href on the targeting page'
+elif printf '%s' "${FLAT_RESET}" | grep -q 'query-.*-page'; then
+    bad "flat Reset href keeps the pagination key: ${FLAT_RESET}"
+else
+    ok 'flat Reset href drops the pagination key'
 fi
 
 echo ""

@@ -57,7 +57,7 @@ return array(
 	 * `scope_id()` and the field lists come off the matched target key; v2
 	 * proved the scope travels, and this proves the FIELDS travel with it.
 	 */
-	'version' => 3,
+	'version' => 4,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
@@ -267,6 +267,30 @@ return array(
 			// The filter still works identically: a radio set posts the same
 			// single parameter name, so §8's row count is unaffected.
 			'acf_control' => 'radio',
+		),
+	),
+
+	/*
+	 * v4. The paging page: one PAGINATED loop and an AJAX filter block.
+	 *
+	 * Four posts at one per page is four pages, so page 3 exists unfiltered but
+	 * not after `search=Bravo` narrows the set to a single row. A filter change
+	 * that keeps `query-{uid}-page=3` therefore renders an empty loop — the
+	 * stale-page defect this page exists to pin. `uid` is also the Query's
+	 * pagination key suffix (query-{uid}-page) and its gb-query-{uid} class.
+	 */
+	'paging' => array(
+		'page'         => array(
+			'slug'  => 'gbqf-paging',
+			'title' => 'GBQF paging',
+		),
+		'id'           => 'gbqf-loop-paging',
+		'uid'          => 'gbqfpag0',
+		'marker'       => 'GBQFX-PAGING',
+		'per_page'     => 1,
+		'filter_block' => array(
+			'target_id' => 'gbqf-loop-paging',
+			'ajax'      => true,
 		),
 	),
 );

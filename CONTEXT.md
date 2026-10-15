@@ -52,6 +52,7 @@ Singleton bootstrap in [includes/class-gbqf-plugin.php](includes/class-gbqf-plug
 - **Targeting is the default invariant:** default scope is `'targeted'` — a filter only affects the Query Loop whose HTML ID or class matches the filter block's `targetId`. `'all'` mode exists as a legacy escape hatch via the `gbqf_filter_scope` filter, but targeted is the contract. Do not reintroduce blanket "apply to every loop" behavior. An **unrecognised** scope value is treated as `'targeted'` (fail closed) — it used to mean "apply to everything", so a typo re-enabled the blanket behavior. See [ADR-0001](docs/adr/0001-targeted-scope-default.md).
 - **An unscoped filter block claims nothing under targeted scope.** It registers the key `''`, and a Query Loop's derived ID is never empty, so no loop can match it. That is ADR-0001 working, not a bug — but it means the flat `gbqf_*` URL convention below is reachable *only* under `'all'` scope or a force-enabled loop, even though `Blocks` still renders flat field names and a flat reset URL for such a block.
 - **Hook priority 20** (not WP default 10, configurable via `gbqf_filter_priority`): a best-effort attempt to run *after* other query-modifying plugins. It is **not** a guarantee — a plugin at >20 or a 20-tie defeats it. The real contract is the *merge semantics* (GBQF preserves existing query args at any priority); losing the ordering race makes the filter silently no-op, never a security breach. See [ADR-0004](docs/adr/0004-merge-preserving-query-modification.md).
+- **Filter changes and Reset clear the Query's page key.** GB pages a Query through `query-{uniqueId}-page`; a stale key (page 3 of a result set that now fits on one page) renders an empty loop. The JS derives the key from the target element's own `gb-query-{uniqueId}` class (so it works for custom-anchor targets) and removes only that one, leaving other Queries' pagination alone; with no such 8-character class, or more than one, it removes every `query-*-page`. PHP `Params::get_reset_url()` cannot map a target to a `uniqueId`, so the server-rendered Reset href strips every `query-*-page`, and the JS narrows it to the exact key at init. Without JS, Reset therefore resets all loops' pages.
 
 ## URL parameter conventions
 
@@ -63,7 +64,7 @@ Flat mode (no `targetId`) — prefix `gbqf_`. **Reachable only under `'all'` sco
 Scoped mode (`targetId` set — isolates multiple filters on one page), nested under `gbqf[targetId]`:
 - `?gbqf[my-projects][search]=kw` · `[cat][]=1` · `[meta][color]=blue` · `[meta][colors][]=red`
 
-Reset clears only the owning block's params. Legacy `gbqf_acf[...]` params are silently ignored (superseded by `gbqf_meta`); reset still strips them for cleanup.
+Reset clears only the owning block's params, plus Query pagination. Legacy `gbqf_acf[...]` params are silently ignored (superseded by `gbqf_meta`); reset still strips them for cleanup.
 
 Full param/data-attribute reference: [docs/developer-filters.md](docs/developer-filters.md).
 

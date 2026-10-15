@@ -277,7 +277,7 @@ $filter_markup = function ( array $spec ) {
 		'enableSearch'     => true,
 		'enableCategories' => false,
 		'enableTags'       => false,
-		'enableAjax'       => false,
+		'enableAjax'       => ! empty( $spec['ajax'] ),
 	);
 
 	// v3. Field ownership. Set only where the manifest declares it — a block
@@ -330,33 +330,103 @@ $content = implode( "\n\n", array(
 	$loop_markup( $loops['classmatch']['id'], $loops['classmatch']['class'], $loops['classmatch']['marker'], $post_slugs, 'gbqfcls0' ),
 ) );
 
-$page_spec = $manifest['page'];
-$existing  = get_posts( array(
-	'post_type'      => 'page',
-	'name'           => $page_spec['slug'],
-	'post_status'    => 'any',
-	'posts_per_page' => 1,
-	'fields'         => 'ids',
-) );
+/**
+ * Create or update a published page by slug.
+ *
+ * @param array  $spec    Manifest page entry (slug, title).
+ * @param string $content Block markup.
+ */
+$upsert_page = function ( array $spec, $content ) use ( $log ) {
+	$existing = get_posts( array(
+		'post_type'      => 'page',
+		'name'           => $spec['slug'],
+		'post_status'    => 'any',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+	) );
 
-$page_args = array(
-	'post_type'    => 'page',
-	'post_title'   => $page_spec['title'],
-	'post_name'    => $page_spec['slug'],
-	'post_status'  => 'publish',
-	'post_content' => $content,
+	$page_args = array(
+		'post_type'    => 'page',
+		'post_title'   => $spec['title'],
+		'post_name'    => $spec['slug'],
+		'post_status'  => 'publish',
+		'post_content' => $content,
+	);
+
+	if ( $existing ) {
+		$page_args['ID'] = (int) $existing[0];
+		$page_id         = wp_update_post( $page_args, true );
+	} else {
+		$page_id = wp_insert_post( $page_args, true );
+	}
+
+	if ( is_wp_error( $page_id ) ) {
+		WP_CLI::error( "page {$spec['slug']} insert failed: " . $page_id->get_error_message() );
+	}
+
+	$log( "page {$spec['slug']} -> #{$page_id}" );
+};
+
+$upsert_page( $manifest['page'], $content );
+
+// ---------------------------------------------------------------------------
+// v4. The paging page: ONE paginated loop with an AJAX filter block.
+//
+// Separate from the targeting page on purpose — that page keeps enableAjax
+// false so a JS-side decision cannot color a PHP-side result. This page exists
+// for the pagination key: 4 posts at 1 per page = 4 pages, so page 3 exists
+// unfiltered but not once a search narrows the set to 1 row.
+//
+// The wrapper carries `gb-query gb-query-{uniqueId}` the way the editor's save
+// output does; the frontend derives the Query's pagination key from that class.
+// ---------------------------------------------------------------------------
+$paging = $manifest['paging'];
+$pg_uid = $paging['uid'];
+
+$paging_query = array(
+	'uniqueId'       => $pg_uid,
+	'tagName'        => 'div',
+	'queryType'      => 'WP_Query',
+	'query'          => array(
+		'post_type'      => 'post',
+		'post_name__in'  => array_values( $post_slugs ),
+		'posts_per_page' => $paging['per_page'],
+		'orderby'        => 'title',
+		'order'          => 'ASC',
+	),
+	'htmlAttributes' => array( 'id' => $paging['id'] ),
 );
 
-if ( $existing ) {
-	$page_args['ID'] = (int) $existing[0];
-	$page_id         = wp_update_post( $page_args, true );
-} else {
-	$page_id = wp_insert_post( $page_args, true );
-}
+$paging_markup = sprintf(
+	'<!-- wp:generateblocks/query %1$s -->' . "
+"
+	. '<div id="%2$s" class="gb-query gb-query-%3$s"><!-- wp:generateblocks/looper {"uniqueId":"%3$slp","tagName":"ul"} -->' . "
+"
+	. '<ul><!-- wp:generateblocks/loop-item {"uniqueId":"%3$sli","tagName":"li"} -->' . "
+"
+	. '<li class="gb-loop-item"><!-- wp:generateblocks/text {"uniqueId":"%3$stx","tagName":"p"} -->' . "
+"
+	. '<p class="gb-text">%4$s::{{post_title}}</p>' . "
+"
+	. '<!-- /wp:generateblocks/text --></li>' . "
+"
+	. '<!-- /wp:generateblocks/loop-item --></ul>' . "
+"
+	. '<!-- /wp:generateblocks/looper -->' . "
+"
+	. '<!-- wp:generateblocks/query-page-numbers {"uniqueId":"%3$spn"} /--></div>' . "
+"
+	. '<!-- /wp:generateblocks/query -->',
+	wp_json_encode( $paging_query ),
+	esc_attr( $paging['id'] ),
+	$pg_uid,
+	$paging['marker']
+);
 
-if ( is_wp_error( $page_id ) ) {
-	WP_CLI::error( 'page insert failed: ' . $page_id->get_error_message() );
-}
+$upsert_page(
+	$paging['page'],
+	$filter_markup( $paging['filter_block'] ) . "
 
-$log( "page {$page_spec['slug']} -> #{$page_id}" );
+" . $paging_markup
+);
 WP_CLI::success( '[query-filters] seeded (manifest v' . $manifest['version'] . ')' );

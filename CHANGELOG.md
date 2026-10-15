@@ -6,6 +6,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Changing a filter from a later page rendered an empty loop.** The AJAX request kept the Query's pagination param (`query-{uniqueId}-page`), so narrowing results from page 3 to a set that fits on one page asked WordPress for a page that no longer exists. A filter change now removes the target Query's page key, and Reset clears it too. Other Queries' pagination on the same page is left alone.
+
 ## [0.4.0] — 2026-08-13
 
 ### Security

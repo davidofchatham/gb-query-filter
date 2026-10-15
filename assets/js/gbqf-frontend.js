@@ -80,6 +80,41 @@
                     .forEach( function ( key ) { params.delete( key ); } );
             }
 
+            /**
+             * Removes the target Query's pagination param (query-{uniqueId}-page) so a
+             * filter change or Reset lands on page 1 instead of a page that may no
+             * longer exist. The uniqueId comes from the target's own gb-query-{id}
+             * class (works for custom-anchor targets too); with no such class, every
+             * query-*-page key goes. Other Queries' pagination is otherwise untouched.
+             * Mutates params in place.
+             */
+            function removePageParams( params ) {
+                // GB uniqueIds are 8 characters; a longer or shorter gb-query-* class is a
+                // user class, and more than one match is ambiguous. Either way, strip all.
+                var ids = [];
+                if ( targetQueryEl ) {
+                    Array.prototype.forEach.call( targetQueryEl.classList, function ( cls ) {
+                        var m = /^gb-query-([A-Za-z0-9]{8})$/.exec( cls );
+                        if ( m ) {
+                            ids.push( m[1] );
+                        }
+                    } );
+                }
+                var pageKey = 1 === ids.length ? 'query-' + ids[0] + '-page' : null;
+                if ( pageKey ) {
+                    params.delete( pageKey );
+                    return;
+                }
+                var keys = [];
+                params.forEach( function ( _v, key ) {
+                    // Mirrors Params::PAGE_KEY_PATTERN in class-gbqf-params.php.
+                    if ( /^query(?:-.+)?-page$/.test( key ) ) {
+                        keys.push( key );
+                    }
+                } );
+                keys.forEach( function ( key ) { params.delete( key ); } );
+            }
+
             // IMPORTANT: Do NOT bail out if targetQueryEl is missing.
             // Auto-apply and Enter-to-submit should still work because they
             // only submit the form and rely on PHP/pre_get_posts + URL params.
@@ -119,6 +154,7 @@
                 currentUrl.hash = '';
                 var params = new URLSearchParams(currentUrl.search);
                 removeOwnGbqfParams( params );
+                removePageParams( params );
                 currentUrl.search = params.toString();
                 resetLink.setAttribute('href', currentUrl.toString());
             };
@@ -126,6 +162,10 @@
             // Register so every AJAX submit on any block refreshes all reset links.
             window.GBQF_resetUpdaters = window.GBQF_resetUpdaters || [];
             window.GBQF_resetUpdaters.push(updateResetUrl);
+
+            // PHP renders the Reset href without knowing the Query's uniqueId, so it
+            // clears every pagination key. Narrow it to this target's key now.
+            updateResetUrl();
 
             // If we have a target element and fetch support, use AJAX to swap results.
             if (ajaxEnabled && form && targetQueryEl && window.fetch && window.DOMParser) {
@@ -145,6 +185,10 @@
                     // may have left indexed keys (e.g. gbqf[id][tax][foo][0]=31) that differ
                     // from the form's [] keys and would prevent clearing the filter via AJAX.
                     removeOwnGbqfParams( params );
+
+                    // A new filter set starts at page 1; a stale page key can point past the
+                    // end of the new results and render an empty loop.
+                    removePageParams( params );
 
                     // Append fresh form values. Use append (not set) so multiple checkbox
                     // values with the same name are all included. Skip empty strings so

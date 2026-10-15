@@ -73,8 +73,7 @@ block to filter on precisely the field the *other* block owns.
 
 ## Current result
 
-**47 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro
-6.8.7, scope `targeted`), blueprint v3, against 0.4.0.
+**52 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v4, against 0.4.0 plus the pagination-key fix.
 
 ## What it caught
 
@@ -161,10 +160,7 @@ a different uid than the docroot owner). Installing it by hand is the normal fix
 - **No taxonomy coverage.** The category, tag and extra-taxonomy controls are
   disabled on every fixture block: they would render term checkboxes for every
   term on the site, which is noise in a body the harness counts strings in.
-- **AJAX is off** on every fixture filter block. The AJAX path re-derives
-  targeting in JS (`assets/js/gbqf-frontend.js`), and this blueprint measures
-  the PHP rule; leaving it on would let a JS-side decision colour a PHP-side
-  result. The JS rule is untested.
+- **AJAX is off** on every fixture filter block except the v4 paging page. The AJAX path re-derives targeting in JS (`assets/js/gbqf-frontend.js`), and the targeting page measures the PHP rule; leaving it on would let a JS-side decision color a PHP-side result. The JS rule is untested. The paging page (`/gbqf-paging/`, blueprint v4) has AJAX on but only pins the server-rendered Reset href; the JS half of the pagination-key fix is a manual browser check (`.scratch/ajax-page-reset/`).
 - **Not registered in `seed-all.sh`.** That list lives in the wp-litespeed env
   repo, which is a separate repo — adding `query-filters` to `BLUEPRINTS` there
   is an env-side change to hand off. `bin/seed.sh` is plugin-blind and finds this

@@ -14,6 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Params {
 
+    /** GenerateBlocks Query pagination key: `query-{uniqueId}-page` (or `query-page` without an id). */
+    const PAGE_KEY_PATTERN = '/^query(?:-.+)?-page$/';
+
     /** @var string Sanitized target ID; empty string for flat/unscoped mode. */
     private $target_id;
 
@@ -202,9 +205,17 @@ class Params {
         $current_url = home_url( wp_unslash( $_SERVER['REQUEST_URI'] ) );
         $current_url = html_entity_decode( $current_url, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
+        $parsed = wp_parse_url( $current_url );
+        parse_str( isset( $parsed['query'] ) ? $parsed['query'] : '', $reset_params );
+
+        // PHP cannot map the target to a Query's uniqueId, so Reset clears every
+        // Query pagination key. The frontend narrows this to the target's own key.
+        $page_keys = preg_grep( self::PAGE_KEY_PATTERN, array_keys( $reset_params ) );
+
         if ( $this->is_scoped ) {
-            $parsed = wp_parse_url( $current_url );
-            parse_str( isset( $parsed['query'] ) ? $parsed['query'] : '', $reset_params );
+            foreach ( $page_keys as $page_key ) {
+                unset( $reset_params[ $page_key ] );
+            }
             if ( isset( $reset_params['gbqf'][ $this->target_id ] ) ) {
                 unset( $reset_params['gbqf'][ $this->target_id ] );
                 if ( empty( $reset_params['gbqf'] ) ) {
@@ -223,7 +234,10 @@ class Params {
         }
 
         return remove_query_arg(
-            [ 'gbqf_search', 'gbqf_cat', 'gbqf_tag', 'gbqf_meta', 'gbqf_tax', 'gbqf_acf' ],
+            array_merge(
+                [ 'gbqf_search', 'gbqf_cat', 'gbqf_tag', 'gbqf_meta', 'gbqf_tax', 'gbqf_acf' ],
+                $page_keys
+            ),
             $current_url
         );
     }
