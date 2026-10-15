@@ -66,19 +66,21 @@ if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( 'gbqf/query-filte
 // when it is only a setting.
 $scope = \GBQF\Settings::get_filter_scope();
 if ( 'targeted' !== $scope ) {
-	WP_CLI::error( sprintf(
-		"Filter scope is '%s', not 'targeted'. Every assertion here is about the targeted rule (ADR-0001);\n"
-		. 'under \'all\' the control loop filters too and the results mean something else entirely.',
-		$scope
-	) );
+	WP_CLI::error(
+		sprintf(
+			"Filter scope is '%s', not 'targeted'. Every assertion here is about the targeted rule (ADR-0001);\n"
+			. 'under \'all\' the control loop filters too and the results mean something else entirely.',
+			$scope
+		)
+	);
 }
 
 // v3 preconditions. Both integrations must be present AND enabled in GBQF's
 // own settings, and they are separate failure modes:
 //
-//   plugin missing  -> the field never registers, the control renders empty
-//   GBQF toggle off -> Filters::get_meta_filters() returns [] before it looks
-//                      at anything, so the field filter silently does nothing
+// plugin missing  -> the field never registers, the control renders empty
+// GBQF toggle off -> Filters::get_meta_filters() returns [] before it looks
+// at anything, so the field filter silently does nothing
 //
 // Either one turns sections 7-9 into assertions that "the unowned field did not
 // filter" — which passes, loudly and wrongly, because NO field filtered.
@@ -137,7 +139,7 @@ if ( false !== @file_put_contents( $stub_path, $stub ) ) {
 // ---------------------------------------------------------------------------
 // 1. Category.
 // ---------------------------------------------------------------------------
-$cat = $manifest['category'];
+$cat  = $manifest['category'];
 $term = get_term_by( 'slug', $cat['slug'], 'category' );
 if ( ! $term ) {
 	$created = wp_insert_term( $cat['name'], 'category', array( 'slug' => $cat['slug'] ) );
@@ -155,13 +157,15 @@ if ( ! $term ) {
 // 2. Posts.
 // ---------------------------------------------------------------------------
 foreach ( $manifest['posts'] as $spec ) {
-	$existing = get_posts( array(
-		'post_type'      => 'post',
-		'name'           => $spec['slug'],
-		'post_status'    => 'any',
-		'posts_per_page' => 1,
-		'fields'         => 'ids',
-	) );
+	$existing = get_posts(
+		array(
+			'post_type'      => 'post',
+			'name'           => $spec['slug'],
+			'post_status'    => 'any',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		)
+	);
 
 	$args = array(
 		'post_type'    => 'post',
@@ -291,7 +295,10 @@ $filter_markup = function ( array $spec ) {
 	if ( ! empty( $spec['mb_field'] ) ) {
 		$attrs['enableMetaBoxFilter'] = true;
 		$attrs['metaBoxFields']       = array(
-			array( 'id' => $spec['mb_field'], 'controlType' => 'auto' ),
+			array(
+				'id'          => $spec['mb_field'],
+				'controlType' => 'auto',
+			),
 		);
 	}
 
@@ -310,25 +317,28 @@ $filter_markup = function ( array $spec ) {
 
 $loops = $manifest['loops'];
 
-$content = implode( "\n\n", array(
-	'<!-- wp:heading --><h2 class="wp-block-heading">1. control — no filter block names this loop</h2><!-- /wp:heading -->',
-	$loop_markup( $loops['control']['id'], $loops['control']['class'], $loops['control']['marker'], $post_slugs, 'gbqfctl0' ),
+$content = implode(
+	"\n\n",
+	array(
+		'<!-- wp:heading --><h2 class="wp-block-heading">1. control — no filter block names this loop</h2><!-- /wp:heading -->',
+		$loop_markup( $loops['control']['id'], $loops['control']['class'], $loops['control']['marker'], $post_slugs, 'gbqfctl0' ),
 
-	'<!-- wp:heading --><h2 class="wp-block-heading">2. unscoped — filter block with targetId \'\'</h2><!-- /wp:heading -->',
-	$filter_markup( $manifest['filter_blocks'][0] ),
-	$loop_markup( $loops['unscoped']['id'], $loops['unscoped']['class'], $loops['unscoped']['marker'], $post_slugs, 'gbqfuns0' ),
+		'<!-- wp:heading --><h2 class="wp-block-heading">2. unscoped — filter block with targetId \'\'</h2><!-- /wp:heading -->',
+		$filter_markup( $manifest['filter_blocks'][0] ),
+		$loop_markup( $loops['unscoped']['id'], $loops['unscoped']['class'], $loops['unscoped']['marker'], $post_slugs, 'gbqfuns0' ),
 
-	'<!-- wp:heading --><h2 class="wp-block-heading">3. scoped — filter block targeting this loop by id</h2><!-- /wp:heading -->',
-	$filter_markup( $manifest['filter_blocks'][1] ),
-	$loop_markup( $loops['scoped']['id'], $loops['scoped']['class'], $loops['scoped']['marker'], $post_slugs, 'gbqfscp0' ),
+		'<!-- wp:heading --><h2 class="wp-block-heading">3. scoped — filter block targeting this loop by id</h2><!-- /wp:heading -->',
+		$filter_markup( $manifest['filter_blocks'][1] ),
+		$loop_markup( $loops['scoped']['id'], $loops['scoped']['class'], $loops['scoped']['marker'], $post_slugs, 'gbqfscp0' ),
 
-	'<!-- wp:heading --><h2 class="wp-block-heading">4. legacy — gbqf-target-* class, no filter block names it</h2><!-- /wp:heading -->',
-	$loop_markup( $loops['legacy']['id'], $loops['legacy']['class'], $loops['legacy']['marker'], $post_slugs, 'gbqflgc0' ),
+		'<!-- wp:heading --><h2 class="wp-block-heading">4. legacy — gbqf-target-* class, no filter block names it</h2><!-- /wp:heading -->',
+		$loop_markup( $loops['legacy']['id'], $loops['legacy']['class'], $loops['legacy']['marker'], $post_slugs, 'gbqflgc0' ),
 
-	'<!-- wp:heading --><h2 class="wp-block-heading">5. classmatch — filter block targets a CLASS, loop id differs</h2><!-- /wp:heading -->',
-	$filter_markup( $manifest['filter_blocks'][2] ),
-	$loop_markup( $loops['classmatch']['id'], $loops['classmatch']['class'], $loops['classmatch']['marker'], $post_slugs, 'gbqfcls0' ),
-) );
+		'<!-- wp:heading --><h2 class="wp-block-heading">5. classmatch — filter block targets a CLASS, loop id differs</h2><!-- /wp:heading -->',
+		$filter_markup( $manifest['filter_blocks'][2] ),
+		$loop_markup( $loops['classmatch']['id'], $loops['classmatch']['class'], $loops['classmatch']['marker'], $post_slugs, 'gbqfcls0' ),
+	)
+);
 
 /**
  * Create or update a published page by slug.
@@ -337,13 +347,15 @@ $content = implode( "\n\n", array(
  * @param string $content Block markup.
  */
 $upsert_page = function ( array $spec, $content ) use ( $log ) {
-	$existing = get_posts( array(
-		'post_type'      => 'page',
-		'name'           => $spec['slug'],
-		'post_status'    => 'any',
-		'posts_per_page' => 1,
-		'fields'         => 'ids',
-	) );
+	$existing = get_posts(
+		array(
+			'post_type'      => 'page',
+			'name'           => $spec['slug'],
+			'post_status'    => 'any',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		)
+	);
 
 	$page_args = array(
 		'post_type'    => 'page',
@@ -398,24 +410,24 @@ $paging_query = array(
 );
 
 $paging_markup = sprintf(
-	'<!-- wp:generateblocks/query %1$s -->' . "
-"
-	. '<div id="%2$s" class="gb-query gb-query-%3$s"><!-- wp:generateblocks/looper {"uniqueId":"%3$slp","tagName":"ul"} -->' . "
-"
-	. '<ul><!-- wp:generateblocks/loop-item {"uniqueId":"%3$sli","tagName":"li"} -->' . "
-"
-	. '<li class="gb-loop-item"><!-- wp:generateblocks/text {"uniqueId":"%3$stx","tagName":"p"} -->' . "
-"
-	. '<p class="gb-text">%4$s::{{post_title}}</p>' . "
-"
-	. '<!-- /wp:generateblocks/text --></li>' . "
-"
-	. '<!-- /wp:generateblocks/loop-item --></ul>' . "
-"
-	. '<!-- /wp:generateblocks/looper -->' . "
-"
-	. '<!-- wp:generateblocks/query-page-numbers {"uniqueId":"%3$spn"} /--></div>' . "
-"
+	'<!-- wp:generateblocks/query %1$s -->' . '
+'
+	. '<div id="%2$s" class="gb-query gb-query-%3$s"><!-- wp:generateblocks/looper {"uniqueId":"%3$slp","tagName":"ul"} -->' . '
+'
+	. '<ul><!-- wp:generateblocks/loop-item {"uniqueId":"%3$sli","tagName":"li"} -->' . '
+'
+	. '<li class="gb-loop-item"><!-- wp:generateblocks/text {"uniqueId":"%3$stx","tagName":"p"} -->' . '
+'
+	. '<p class="gb-text">%4$s::{{post_title}}</p>' . '
+'
+	. '<!-- /wp:generateblocks/text --></li>' . '
+'
+	. '<!-- /wp:generateblocks/loop-item --></ul>' . '
+'
+	. '<!-- /wp:generateblocks/looper -->' . '
+'
+	. '<!-- wp:generateblocks/query-page-numbers {"uniqueId":"%3$spn"} /--></div>' . '
+'
 	. '<!-- /wp:generateblocks/query -->',
 	wp_json_encode( $paging_query ),
 	esc_attr( $paging['id'] ),
@@ -425,8 +437,8 @@ $paging_markup = sprintf(
 
 $upsert_page(
 	$paging['page'],
-	$filter_markup( $paging['filter_block'] ) . "
+	$filter_markup( $paging['filter_block'] ) . '
 
-" . $paging_markup
+' . $paging_markup
 );
 WP_CLI::success( '[query-filters] seeded (manifest v' . $manifest['version'] . ')' );

@@ -14,8 +14,8 @@ class Settings {
 	 * Register admin hooks. Call once from plugin bootstrap.
 	 */
 	public static function init() {
-		add_action( 'admin_menu', [ __CLASS__, 'add_admin_menu' ] );
-		add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
+		add_action( 'admin_menu', array( __CLASS__, 'add_admin_menu' ) );
+		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 	}
 
 	// ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ class Settings {
 			__( 'Query Filters', 'gb-query-filter' ),
 			'manage_options',
 			'gb-query-filter',
-			[ __CLASS__, 'render_settings_page' ]
+			array( __CLASS__, 'render_settings_page' )
 		);
 	}
 
@@ -52,38 +52,50 @@ class Settings {
 			'gb-query-filter'
 		);
 
-		register_setting( 'gb-query-filter', 'gbqf_filter_priority', [
-			'sanitize_callback' => [ __CLASS__, 'sanitize_priority' ],
-			'default'           => 20,
-		] );
+		register_setting(
+			'gb-query-filter',
+			'gbqf_filter_priority',
+			array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_priority' ),
+				'default'           => 20,
+			)
+		);
 		add_settings_field(
 			'gbqf_filter_priority',
 			__( 'Hook Priority', 'gb-query-filter' ),
-			[ __CLASS__, 'render_field_priority' ],
+			array( __CLASS__, 'render_field_priority' ),
 			'gb-query-filter',
 			'gbqf_general'
 		);
 
-		register_setting( 'gb-query-filter', 'gbqf_preserve_search', [
-			'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-			'default'           => '0',
-		] );
+		register_setting(
+			'gb-query-filter',
+			'gbqf_preserve_search',
+			array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+				'default'           => '0',
+			)
+		);
 		add_settings_field(
 			'gbqf_preserve_search',
 			__( 'Merge Search Terms', 'gb-query-filter' ),
-			[ __CLASS__, 'render_field_preserve_search' ],
+			array( __CLASS__, 'render_field_preserve_search' ),
 			'gb-query-filter',
 			'gbqf_general'
 		);
 
-		register_setting( 'gb-query-filter', 'gbqf_enable_debug_logging', [
-			'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-			'default'           => '0',
-		] );
+		register_setting(
+			'gb-query-filter',
+			'gbqf_enable_debug_logging',
+			array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+				'default'           => '0',
+			)
+		);
 		add_settings_field(
 			'gbqf_enable_debug_logging',
 			__( 'Debug Logging', 'gb-query-filter' ),
-			[ __CLASS__, 'render_field_debug_logging' ],
+			array( __CLASS__, 'render_field_debug_logging' ),
 			'gb-query-filter',
 			'gbqf_general'
 		);
@@ -96,34 +108,42 @@ class Settings {
 			add_settings_section(
 				'gbqf_integrations',
 				__( 'Integrations', 'gb-query-filter' ),
-				[ __CLASS__, 'render_integrations_intro' ],
+				array( __CLASS__, 'render_integrations_intro' ),
 				'gb-query-filter'
 			);
 		}
 
 		if ( $metabox_active ) {
-			register_setting( 'gb-query-filter', self::OPTION_KEY, [
-				'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-				'default'           => '1',
-			] );
+			register_setting(
+				'gb-query-filter',
+				self::OPTION_KEY,
+				array(
+					'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+					'default'           => '1',
+				)
+			);
 			add_settings_field(
 				self::OPTION_KEY,
 				__( 'Meta Box Integration', 'gb-query-filter' ),
-				[ __CLASS__, 'render_field_metabox' ],
+				array( __CLASS__, 'render_field_metabox' ),
 				'gb-query-filter',
 				'gbqf_integrations'
 			);
 		}
 
 		if ( $acf_active ) {
-			register_setting( 'gb-query-filter', self::OPTION_KEY_ACF, [
-				'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-				'default'           => '1',
-			] );
+			register_setting(
+				'gb-query-filter',
+				self::OPTION_KEY_ACF,
+				array(
+					'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+					'default'           => '1',
+				)
+			);
 			add_settings_field(
 				self::OPTION_KEY_ACF,
 				__( 'ACF Integration', 'gb-query-filter' ),
-				[ __CLASS__, 'render_field_acf' ],
+				array( __CLASS__, 'render_field_acf' ),
 				'gb-query-filter',
 				'gbqf_integrations'
 			);

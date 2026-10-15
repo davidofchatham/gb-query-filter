@@ -60,7 +60,7 @@ final class Target {
 	 * @param string[] $mb_fields  Meta Box field IDs owned by the filter block.
 	 * @param string[] $acf_fields ACF field names owned by the filter block.
 	 */
-	public function __construct( $scope_id, array $mb_fields = [], array $acf_fields = [] ) {
+	public function __construct( $scope_id, array $mb_fields = array(), array $acf_fields = array() ) {
 		$this->scope_id   = (string) $scope_id;
 		$this->mb_fields  = $mb_fields;
 		$this->acf_fields = $acf_fields;

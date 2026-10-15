@@ -51,7 +51,7 @@ class Targeting {
 	 *
 	 * @var array
 	 */
-	private static $registered = [];
+	private static $registered = array();
 
 	/**
 	 * Forced scope, or null to resolve from Settings per loop.
@@ -103,14 +103,14 @@ class Targeting {
 	 *     @type string[] $acf_fields ACF field names owned by this block.
 	 * }
 	 */
-	public static function register( $target_id, $args = [] ) {
+	public static function register( $target_id, $args = array() ) {
 		$key = sanitize_key( $target_id );
 
-		self::$registered[ $key ] = [
+		self::$registered[ $key ] = array(
 			'scoped'     => ! empty( $args['scoped'] ),
-			'mb_fields'  => isset( $args['mb_fields'] )  ? (array) $args['mb_fields']  : [],
-			'acf_fields' => isset( $args['acf_fields'] ) ? (array) $args['acf_fields'] : [],
-		];
+			'mb_fields'  => isset( $args['mb_fields'] ) ? (array) $args['mb_fields'] : array(),
+			'acf_fields' => isset( $args['acf_fields'] ) ? (array) $args['acf_fields'] : array(),
+		);
 	}
 
 	/**
@@ -151,7 +151,7 @@ class Targeting {
 		}
 
 		// 3. Developer filter. Kept below the block override to preserve the
-		//    pre-0.4.0 precedence; odd, but reordering it is a separate change.
+		// pre-0.4.0 precedence; odd, but reordering it is a separate change.
 		if ( ! $forced ) {
 			$should = apply_filters( 'gbqf_should_apply_to_block', null, $attributes );
 			if ( null !== $should ) {
@@ -252,7 +252,11 @@ class Targeting {
 	private function build( $key ) {
 		$data = isset( self::$registered[ $key ] )
 			? self::$registered[ $key ]
-			: [ 'scoped' => false, 'mb_fields' => [], 'acf_fields' => [] ];
+			: array(
+				'scoped'     => false,
+				'mb_fields'  => array(),
+				'acf_fields' => array(),
+			);
 
 		$scope_id = ( '' !== $key && ! empty( $data['scoped'] ) ) ? $key : '';
 

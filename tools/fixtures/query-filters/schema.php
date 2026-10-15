@@ -98,28 +98,30 @@ function gbqf_fixture_query_filters_acf_group() {
 
 	$acf = gbqf_fixture_query_filters_fields()['acf'];
 
-	acf_add_local_field_group( array(
-		'key'      => 'group_gbqf_fixture',
-		'title'    => 'GBQF Fixture Fields',
-		'fields'   => array(
-			array(
-				'key'     => $acf['key'],
-				'name'    => $acf['name'],
-				'label'   => $acf['label'],
-				'type'    => $acf['type'],
-				'choices' => $acf['choices'],
-			),
-		),
-		'location' => array(
-			array(
+	acf_add_local_field_group(
+		array(
+			'key'      => 'group_gbqf_fixture',
+			'title'    => 'GBQF Fixture Fields',
+			'fields'   => array(
 				array(
-					'param'    => 'post_type',
-					'operator' => '==',
-					'value'    => 'post',
+					'key'     => $acf['key'],
+					'name'    => $acf['name'],
+					'label'   => $acf['label'],
+					'type'    => $acf['type'],
+					'choices' => $acf['choices'],
 				),
 			),
-		),
-	) );
+			'location' => array(
+				array(
+					array(
+						'param'    => 'post_type',
+						'operator' => '==',
+						'value'    => 'post',
+					),
+				),
+			),
+		)
+	);
 }
 
 /**

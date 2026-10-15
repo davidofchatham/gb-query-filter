@@ -8,8 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Blocks {
 
 	public function __construct() {
-		add_action( 'init', [ $this, 'register_blocks' ] );
-		add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_editor_assets' ] );
+		add_action( 'init', array( $this, 'register_blocks' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_assets' ) );
 	}
 
 	public function register_blocks() {
@@ -17,7 +17,7 @@ class Blocks {
 		wp_register_script(
 			'gbqf-frontend',
 			GBQF_PLUGIN_URL . 'assets/js/gbqf-frontend.js',
-			[],
+			array(),
 			GBQF_VERSION,
 			true
 		);
@@ -25,46 +25,55 @@ class Blocks {
 		wp_register_style(
 			'gbqf-frontend',
 			GBQF_PLUGIN_URL . 'assets/css/gbqf-frontend.css',
-			[],
+			array(),
 			GBQF_VERSION
 		);
 
 		wp_register_style(
 			'gbqf-editor',
 			GBQF_PLUGIN_URL . 'assets/css/gbqf-editor.css',
-			[],
+			array(),
 			GBQF_VERSION
 		);
 
 		wp_register_script(
 			'gbqf-query-filter-block',
 			GBQF_PLUGIN_URL . 'assets/js/gbqf-query-filter-block.js',
-			[ 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n', 'wp-server-side-render' ],
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n', 'wp-server-side-render' ),
 			GBQF_VERSION,
 			true
 		);
 
 		// Provide public taxonomies (excluding category/post_tag) to the editor.
 		$tax_objects = get_taxonomies(
-			[
+			array(
 				'public'   => true,
 				'_builtin' => false,
-			],
+			),
 			'objects'
 		);
 		// Also include public built-in taxonomies, then filter out category/post_tag.
-		$tax_objects = array_merge( get_taxonomies( [ 'public' => true, '_builtin' => true ], 'objects' ), $tax_objects );
+		$tax_objects = array_merge(
+			get_taxonomies(
+				array(
+					'public'   => true,
+					'_builtin' => true,
+				),
+				'objects'
+			),
+			$tax_objects
+		);
 
-		$taxonomies_for_editor = [];
+		$taxonomies_for_editor = array();
 		foreach ( $tax_objects as $slug => $tax_obj ) {
-			if ( in_array( $slug, [ 'category', 'post_tag' ], true ) ) {
+			if ( in_array( $slug, array( 'category', 'post_tag' ), true ) ) {
 				continue;
 			}
-			$label = isset( $tax_obj->labels->name ) ? $tax_obj->labels->name : $slug;
-			$taxonomies_for_editor[] = [
+			$label                   = isset( $tax_obj->labels->name ) ? $tax_obj->labels->name : $slug;
+			$taxonomies_for_editor[] = array(
 				'slug'  => $slug,
 				'label' => $label,
-			];
+			);
 		}
 
 		wp_add_inline_script(
@@ -75,36 +84,87 @@ class Blocks {
 
 		register_block_type(
 			'gbqf/query-filter',
-			[
+			array(
 				'api_version'     => 3,
 				'editor_script'   => 'gbqf-query-filter-block',
 				'style'           => 'gbqf-frontend',
-				'editor_style'    => [ 'gbqf-frontend', 'gbqf-editor' ],
-				'render_callback' => [ $this, 'render_query_filter_block' ],
-				'attributes'      => [
-					'targetId'            => [ 'type' => 'string',  'default' => '' ],
-					'enableSearch'        => [ 'type' => 'boolean', 'default' => true ],
-					'enableCategories'    => [ 'type' => 'boolean', 'default' => false ],
-					'enableTags'          => [ 'type' => 'boolean', 'default' => false ],
-					'categoriesControlType' => [ 'type' => 'string',  'default' => 'checkboxes' ],
-					'tagsControlType'       => [ 'type' => 'string',  'default' => 'checkboxes' ],
-					'extraTaxonomiesControlType' => [ 'type' => 'string', 'default' => 'checkboxes' ],
-					'enableAjax'          => [ 'type' => 'boolean', 'default' => true ],
-					'enableExtraTaxonomies' => [ 'type' => 'boolean', 'default' => false ],
-					'enableApplyButton'   => [ 'type' => 'boolean', 'default' => false ],
-					'extraTaxonomies'     => [ 'type' => 'string',  'default' => '' ],
-					'enableMetaBoxFilter' => [ 'type' => 'boolean', 'default' => false ],
+				'editor_style'    => array( 'gbqf-frontend', 'gbqf-editor' ),
+				'render_callback' => array( $this, 'render_query_filter_block' ),
+				'attributes'      => array(
+					'targetId'                   => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'enableSearch'               => array(
+						'type'    => 'boolean',
+						'default' => true,
+					),
+					'enableCategories'           => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'enableTags'                 => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'categoriesControlType'      => array(
+						'type'    => 'string',
+						'default' => 'checkboxes',
+					),
+					'tagsControlType'            => array(
+						'type'    => 'string',
+						'default' => 'checkboxes',
+					),
+					'extraTaxonomiesControlType' => array(
+						'type'    => 'string',
+						'default' => 'checkboxes',
+					),
+					'enableAjax'                 => array(
+						'type'    => 'boolean',
+						'default' => true,
+					),
+					'enableExtraTaxonomies'      => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'enableApplyButton'          => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'extraTaxonomies'            => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'enableMetaBoxFilter'        => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
 					// One or more Meta Box field IDs, comma-separated.
-					'metaBoxFieldId'      => [ 'type' => 'string',  'default' => '' ],
+					'metaBoxFieldId'             => array(
+						'type'    => 'string',
+						'default' => '',
+					),
 					// Repeater-style Meta Box fields with control overrides.
-					'metaBoxFields'       => [ 'type' => 'array',   'default' => [] ],
-					'enableAcfFilter'     => [ 'type' => 'boolean', 'default' => false ],
+					'metaBoxFields'              => array(
+						'type'    => 'array',
+						'default' => array(),
+					),
+					'enableAcfFilter'            => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
 					// One or more ACF field names, comma-separated (legacy).
-					'acfFieldId'          => [ 'type' => 'string',  'default' => '' ],
+					'acfFieldId'                 => array(
+						'type'    => 'string',
+						'default' => '',
+					),
 					// Repeater-style ACF fields with control overrides.
-					'acfFields'           => [ 'type' => 'array',   'default' => [] ],
-				],
-			]
+					'acfFields'                  => array(
+						'type'    => 'array',
+						'default' => array(),
+					),
+				),
+			)
 		);
 
 		$meta_box_enabled = Settings::is_metabox_enabled();
@@ -131,7 +191,7 @@ class Blocks {
 		wp_enqueue_style( 'gbqf-editor' );
 
 		// Provide Meta Box fields to the editor, if Meta Box is active.
-		$mb_fields_for_editor = [];
+		$mb_fields_for_editor = array();
 		$meta_box_enabled     = Settings::is_metabox_enabled();
 
 		if ( $meta_box_enabled && function_exists( 'rwmb_get_registry' ) ) {
@@ -140,7 +200,7 @@ class Blocks {
 				$meta_boxes = $registry->all();
 				if ( is_array( $meta_boxes ) ) {
 					foreach ( $meta_boxes as $box ) {
-						$box_fields = [];
+						$box_fields = array();
 						if ( is_object( $box ) && ! empty( $box->fields ) && is_array( $box->fields ) ) {
 							$box_fields = $box->fields;
 						} elseif ( is_array( $box ) && ! empty( $box['fields'] ) && is_array( $box['fields'] ) ) {
@@ -155,14 +215,14 @@ class Blocks {
 							if ( empty( $field['id'] ) ) {
 								continue;
 							}
-							$id   = (string) $field['id'];
-							$name = ! empty( $field['name'] ) ? $field['name'] : $id;
-							$type = isset( $field['type'] ) ? $field['type'] : '';
-							$mb_fields_for_editor[] = [
+							$id                     = (string) $field['id'];
+							$name                   = ! empty( $field['name'] ) ? $field['name'] : $id;
+							$type                   = isset( $field['type'] ) ? $field['type'] : '';
+							$mb_fields_for_editor[] = array(
 								'id'   => $id,
 								'name' => $name,
 								'type' => $type,
-							];
+							);
 						}
 					}
 				}
@@ -172,7 +232,7 @@ class Blocks {
 			if ( empty( $mb_fields_for_editor ) ) {
 				$field_registry = rwmb_get_registry( 'field' );
 				if ( $field_registry && is_object( $field_registry ) ) {
-					$fields = [];
+					$fields = array();
 					if ( method_exists( $field_registry, 'all' ) ) {
 						$fields = $field_registry->all();
 					} elseif ( method_exists( $field_registry, 'get_all' ) ) {
@@ -199,11 +259,11 @@ class Blocks {
 								continue;
 							}
 
-							$mb_fields_for_editor[] = [
+							$mb_fields_for_editor[] = array(
 								'id'   => $id,
 								'name' => $name,
 								'type' => $type,
-							];
+							);
 						}
 					}
 				}
@@ -217,7 +277,7 @@ class Blocks {
 		);
 
 		// Provide ACF fields to the editor, if ACF is active.
-		$acf_fields_for_editor = [];
+		$acf_fields_for_editor = array();
 		$acf_enabled           = Settings::is_acf_enabled();
 
 		if ( $acf_enabled && function_exists( 'acf_get_field_groups' ) ) {
@@ -233,12 +293,12 @@ class Blocks {
 							if ( empty( $field['name'] ) ) {
 								continue;
 							}
-							$acf_fields_for_editor[] = [
+							$acf_fields_for_editor[] = array(
 								'name'    => $field['name'],
 								'label'   => isset( $field['label'] ) ? $field['label'] : $field['name'],
 								'type'    => isset( $field['type'] ) ? $field['type'] : '',
 								'choices' => isset( $field['choices'] ) ? $field['choices'] : null,
-							];
+							);
 						}
 					}
 				}
@@ -254,8 +314,8 @@ class Blocks {
 
 	public function render_query_filter_block( $attributes, $content ) {
 
-		$target_id         = isset( $attributes['targetId'] ) ? sanitize_key( $attributes['targetId'] ) : '';
-		$params = new \GBQF\Params( $target_id );
+		$target_id = isset( $attributes['targetId'] ) ? sanitize_key( $attributes['targetId'] ) : '';
+		$params    = new \GBQF\Params( $target_id );
 
 		$enable_search      = array_key_exists( 'enableSearch', $attributes ) ? (bool) $attributes['enableSearch'] : true;
 		$enable_categories  = array_key_exists( 'enableCategories', $attributes ) ? (bool) $attributes['enableCategories'] : true;
@@ -269,10 +329,10 @@ class Blocks {
 		$extra_taxonomies   = isset( $attributes['extraTaxonomies'] ) ? (string) $attributes['extraTaxonomies'] : '';
 		$enable_mb_filter   = array_key_exists( 'enableMetaBoxFilter', $attributes ) ? (bool) $attributes['enableMetaBoxFilter'] : false;
 		$mb_field_ids_raw   = isset( $attributes['metaBoxFieldId'] ) ? (string) $attributes['metaBoxFieldId'] : '';
-		$mb_fields_attr     = ( isset( $attributes['metaBoxFields'] ) && is_array( $attributes['metaBoxFields'] ) ) ? $attributes['metaBoxFields'] : [];
+		$mb_fields_attr     = ( isset( $attributes['metaBoxFields'] ) && is_array( $attributes['metaBoxFields'] ) ) ? $attributes['metaBoxFields'] : array();
 		$enable_acf_filter  = array_key_exists( 'enableAcfFilter', $attributes ) ? (bool) $attributes['enableAcfFilter'] : false;
 		$acf_field_ids_raw  = isset( $attributes['acfFieldId'] ) ? (string) $attributes['acfFieldId'] : '';
-		$acf_fields_attr    = ( isset( $attributes['acfFields'] ) && is_array( $attributes['acfFields'] ) ) ? $attributes['acfFields'] : [];
+		$acf_fields_attr    = ( isset( $attributes['acfFields'] ) && is_array( $attributes['acfFields'] ) ) ? $attributes['acfFields'] : array();
 
 		$auto_apply = ! $enable_apply;
 
@@ -283,18 +343,18 @@ class Blocks {
 			wp_add_inline_script( 'gbqf-frontend', 'window.GBQF_DEBUG = true;', 'before' );
 		}
 
-		$wrapper = [
+		$wrapper = array(
 			'class' => 'gbqf-query-filter-block',
-		];
+		);
 
 		if ( $target_id ) {
 			$wrapper['data-gbqf-target-id'] = esc_attr( $target_id );
 		}
 
-		$wrapper['data-gbqf-auto-apply'] = $auto_apply ? '1' : '0';
+		$wrapper['data-gbqf-auto-apply']  = $auto_apply ? '1' : '0';
 		$wrapper['data-gbqf-enable-ajax'] = $enable_ajax ? '1' : '0';
 
-		$attr_pairs = [];
+		$attr_pairs = array();
 		foreach ( $wrapper as $k => $v ) {
 			$attr_pairs[] = sprintf( '%s="%s"', esc_attr( $k ), esc_attr( $v ) );
 		}
@@ -314,17 +374,17 @@ class Blocks {
 		// META BOX FIELD IDS & VALUES (multiple)
 		// -----------------------
 		// Effective fields: prefer metaBoxFields (with controlType), else fallback to metaBoxFieldId CSV (auto control).
-		$effective_mb_fields = [];
+		$effective_mb_fields = array();
 
 		if ( $enable_mb_filter && ! empty( $mb_fields_attr ) ) {
 			foreach ( $mb_fields_attr as $entry ) {
 				if ( empty( $entry['id'] ) ) {
 					continue;
 				}
-				$effective_mb_fields[] = [
-					'id'           => (string) $entry['id'],
-					'controlType'  => isset( $entry['controlType'] ) ? (string) $entry['controlType'] : 'auto',
-				];
+				$effective_mb_fields[] = array(
+					'id'          => (string) $entry['id'],
+					'controlType' => isset( $entry['controlType'] ) ? (string) $entry['controlType'] : 'auto',
+				);
 			}
 		}
 
@@ -335,15 +395,15 @@ class Blocks {
 				if ( '' === $field_id ) {
 					continue;
 				}
-				$effective_mb_fields[] = [
+				$effective_mb_fields[] = array(
 					'id'          => $field_id,
 					'controlType' => 'auto',
-				];
+				);
 			}
 		}
 
 		// Maintain legacy CSV for consistency.
-		$mb_field_ids = [];
+		$mb_field_ids = array();
 		foreach ( $effective_mb_fields as $entry ) {
 			if ( ! in_array( $entry['id'], $mb_field_ids, true ) ) {
 				$mb_field_ids[] = $entry['id'];
@@ -351,7 +411,7 @@ class Blocks {
 		}
 
 		// Selected values for each Meta Box field.
-		$selected_mb_values = [];
+		$selected_mb_values = array();
 		foreach ( $mb_field_ids as $field_id ) {
 			if ( isset( $raw_meta_arr[ $field_id ] ) ) {
 				$selected_mb_values[ $field_id ] = sanitize_text_field(
@@ -366,17 +426,17 @@ class Blocks {
 		// ACF FIELD NAMES & VALUES (multiple)
 		// -----------------------
 		// Effective fields: prefer acfFields (with controlType), else fallback to acfFieldId CSV (auto control).
-		$effective_acf_fields = [];
+		$effective_acf_fields = array();
 
 		if ( $enable_acf_filter && ! empty( $acf_fields_attr ) ) {
 			foreach ( $acf_fields_attr as $entry ) {
 				if ( empty( $entry['id'] ) ) {
 					continue;
 				}
-				$effective_acf_fields[] = [
+				$effective_acf_fields[] = array(
 					'id'          => (string) $entry['id'],
 					'controlType' => isset( $entry['controlType'] ) ? (string) $entry['controlType'] : 'auto',
-				];
+				);
 			}
 		}
 
@@ -387,15 +447,15 @@ class Blocks {
 				if ( '' === $field_name ) {
 					continue;
 				}
-				$effective_acf_fields[] = [
+				$effective_acf_fields[] = array(
 					'id'          => $field_name,
 					'controlType' => 'auto',
-				];
+				);
 			}
 		}
 
 		// Maintain legacy CSV for consistency.
-		$acf_field_names = [];
+		$acf_field_names = array();
 		foreach ( $effective_acf_fields as $entry ) {
 			if ( ! in_array( $entry['id'], $acf_field_names, true ) ) {
 				$acf_field_names[] = $entry['id'];
@@ -403,7 +463,7 @@ class Blocks {
 		}
 
 		// Selected values for each ACF field (reads from unified $raw_meta_arr).
-		$selected_acf_values = [];
+		$selected_acf_values = array();
 		foreach ( $acf_field_names as $field_name ) {
 			if ( isset( $raw_meta_arr[ $field_name ] ) ) {
 				if ( is_array( $raw_meta_arr[ $field_name ] ) ) {
@@ -424,11 +484,14 @@ class Blocks {
 		// runs later, at Query Loop render time — so a filter block must appear
 		// before its loop in the document or the registry is still empty when
 		// the loop asks.
-		\GBQF\Targeting::register( $target_id, [
-			'scoped'     => ! empty( $target_id ),
-			'mb_fields'  => $mb_field_ids,
-			'acf_fields' => $acf_field_names,
-		] );
+		\GBQF\Targeting::register(
+			$target_id,
+			array(
+				'scoped'     => ! empty( $target_id ),
+				'mb_fields'  => $mb_field_ids,
+				'acf_fields' => $acf_field_names,
+			)
+		);
 
 		$field_names       = $params->get_field_names();
 		$name_search       = $field_names['search'];
@@ -476,34 +539,34 @@ class Blocks {
 		// -----------------------
 		// TAXONOMY TERMS
 		// -----------------------
-		$categories = [];
+		$categories = array();
 		if ( $enable_categories ) {
 			$categories = get_terms(
-				[
+				array(
 					'taxonomy'   => 'category',
 					'hide_empty' => true,
-				]
+				)
 			);
 			if ( is_wp_error( $categories ) ) {
-				$categories = [];
+				$categories = array();
 			}
 		}
 
-		$tags = [];
+		$tags = array();
 		if ( $enable_tags ) {
 			$tags = get_terms(
-				[
+				array(
 					'taxonomy'   => 'post_tag',
 					'hide_empty' => true,
-				]
+				)
 			);
 			if ( is_wp_error( $tags ) ) {
-				$tags = [];
+				$tags = array();
 			}
 		}
 
 		// Parse extra taxonomies string into valid slugs.
-		$extra_tax_slugs = [];
+		$extra_tax_slugs = array();
 		if ( $enable_extra_tax && '' !== trim( $extra_taxonomies ) ) {
 			$parts = explode( ',', $extra_taxonomies );
 			foreach ( $parts as $slug ) {
@@ -511,7 +574,7 @@ class Blocks {
 				if ( '' === $slug ) {
 					continue;
 				}
-				if ( in_array( $slug, [ 'category', 'post_tag' ], true ) ) {
+				if ( in_array( $slug, array( 'category', 'post_tag' ), true ) ) {
 					continue;
 				}
 				if ( ! taxonomy_exists( $slug ) ) {
@@ -524,32 +587,32 @@ class Blocks {
 		}
 
 		// Preload extra taxonomy objects and terms.
-		$extra_taxonomies_data = [];
+		$extra_taxonomies_data = array();
 		foreach ( $extra_tax_slugs as $slug ) {
 			$tax_obj = get_taxonomy( $slug );
 			if ( ! $tax_obj ) {
 				continue;
 			}
 			$terms = get_terms(
-				[
+				array(
 					'taxonomy'   => $slug,
 					'hide_empty' => true,
-				]
+				)
 			);
 			if ( is_wp_error( $terms ) || empty( $terms ) ) {
 				continue;
 			}
 
-			$extra_taxonomies_data[ $slug ] = [
+			$extra_taxonomies_data[ $slug ] = array(
 				'object' => $tax_obj,
 				'terms'  => $terms,
-			];
+			);
 		}
 
-// -----------------------
-// LOAD META BOX FIELD DEFINITIONS (registry + fallback)
-// -----------------------
-		$mb_fields_data = []; // field_id => [ 'label', 'has_options', 'options', 'selected', 'control_type' ]
+		// -----------------------
+		// LOAD META BOX FIELD DEFINITIONS (registry + fallback)
+		// -----------------------
+		$mb_fields_data = array(); // field_id => [ 'label', 'has_options', 'options', 'selected', 'control_type' ]
 
 		if ( $enable_mb_filter && ! empty( $effective_mb_fields ) ) {
 
@@ -558,57 +621,57 @@ class Blocks {
 				$control_sel = isset( $entry['controlType'] ) ? $entry['controlType'] : 'auto';
 				$label       = $field_id;
 				$has_options = false;
-				$options     = [];
+				$options     = array();
 				$field       = null;
 
-		// 1) Try Meta Box field registry first (your Meta Box expects at least 2 args).
-		if ( function_exists( 'rwmb_get_registry' ) ) {
-			$registry = \rwmb_get_registry( 'field' );
-			if ( $registry && is_object( $registry ) && method_exists( $registry, 'get' ) ) {
-				// Most common object type is "post". If your fields are on terms/users/etc.,
-				// this can be adjusted later.
-				try {
-					$field = $registry->get( $field_id, 'post' );
-				} catch ( \Throwable $e ) {
-					// Silently fail over to rwmb_get_field_settings().
-					$field = null;
+				// 1) Try Meta Box field registry first (your Meta Box expects at least 2 args).
+				if ( function_exists( 'rwmb_get_registry' ) ) {
+					$registry = \rwmb_get_registry( 'field' );
+					if ( $registry && is_object( $registry ) && method_exists( $registry, 'get' ) ) {
+						// Most common object type is "post". If your fields are on terms/users/etc.,
+						// this can be adjusted later.
+						try {
+							$field = $registry->get( $field_id, 'post' );
+						} catch ( \Throwable $e ) {
+							// Silently fail over to rwmb_get_field_settings().
+							$field = null;
+						}
+					}
 				}
-			}
-		}
 
-		// 2) Fallback to rwmb_get_field_settings if registry gave us nothing useful.
-		if ( ! is_array( $field ) && function_exists( 'rwmb_get_field_settings' ) ) {
-			$field = \rwmb_get_field_settings( $field_id, [], null );
-		}
+				// 2) Fallback to rwmb_get_field_settings if registry gave us nothing useful.
+				if ( ! is_array( $field ) && function_exists( 'rwmb_get_field_settings' ) ) {
+					$field = \rwmb_get_field_settings( $field_id, array(), null );
+				}
 
-		if ( is_array( $field ) ) {
-			if ( ! empty( $field['name'] ) ) {
-				$label = $field['name'];
-			}
-			if ( ! empty( $field['options'] ) && is_array( $field['options'] ) ) {
-				$has_options = true;
-				$options     = $field['options'];
-			}
-		}
+				if ( is_array( $field ) ) {
+					if ( ! empty( $field['name'] ) ) {
+						$label = $field['name'];
+					}
+					if ( ! empty( $field['options'] ) && is_array( $field['options'] ) ) {
+						$has_options = true;
+						$options     = $field['options'];
+					}
+				}
 
-		$selected = isset( $selected_mb_values[ $field_id ] )
-			? (string) $selected_mb_values[ $field_id ]
-			: '';
+				$selected = isset( $selected_mb_values[ $field_id ] )
+				? (string) $selected_mb_values[ $field_id ]
+				: '';
 
-				$mb_fields_data[ $field_id ] = [
+				$mb_fields_data[ $field_id ] = array(
 					'label'        => $label,
 					'has_options'  => $has_options,
 					'options'      => $options,
 					'selected'     => $selected,
 					'control_type' => $control_sel,
-				];
+				);
 			}
 		}
 
 		// -----------------------
 		// LOAD ACF FIELD DEFINITIONS
 		// -----------------------
-		$acf_fields_data = []; // field_name => [ 'label', 'has_choices', 'choices', 'selected', 'control_type', 'field_type', 'is_multi' ]
+		$acf_fields_data = array(); // field_name => [ 'label', 'has_choices', 'choices', 'selected', 'control_type', 'field_type', 'is_multi' ]
 
 		if ( $enable_acf_filter && ! empty( $effective_acf_fields ) && function_exists( 'acf_get_field' ) ) {
 
@@ -617,7 +680,7 @@ class Blocks {
 				$control_sel = isset( $entry['controlType'] ) ? $entry['controlType'] : 'auto';
 				$label       = $field_name;
 				$has_choices = false;
-				$choices     = [];
+				$choices     = array();
 				$field_type  = '';
 				$is_multi    = false;
 
@@ -650,7 +713,7 @@ class Blocks {
 					? $selected_acf_values[ $field_name ]
 					: '';
 
-				$acf_fields_data[ $field_name ] = [
+				$acf_fields_data[ $field_name ] = array(
 					'label'        => $label,
 					'has_choices'  => $has_choices,
 					'choices'      => $choices,
@@ -658,7 +721,7 @@ class Blocks {
 					'control_type' => $effective_control_type,
 					'field_type'   => $field_type,
 					'is_multi'     => $is_multi,
-				];
+				);
 			}
 		}
 
@@ -683,7 +746,7 @@ class Blocks {
 		// solely to bind a label to its control — so the value only has to be
 		// unique, not stable.
 		static $block_seq = 0;
-		$block_seq++;
+		++$block_seq;
 		$cid = 'gbqf' . $block_seq . '_';
 
 		$html .= '<form class="gbqf-filter-form" method="get">';
@@ -706,9 +769,9 @@ class Blocks {
 				$html .= '<select name="' . esc_attr( $name_cat ) . '" aria-label="' . esc_attr__( 'Categories', 'gb-query-filter' ) . '">';
 				$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 				foreach ( $categories as $cat ) {
-					$cat_id  = (int) $cat->term_id;
+					$cat_id   = (int) $cat->term_id;
 					$selected = in_array( $cat_id, $selected_cats, true ) ? 'selected' : '';
-					$html .= '<option value="' . esc_attr( $cat_id ) . '" ' . $selected . '>' . esc_html( $cat->name ) . '</option>';
+					$html    .= '<option value="' . esc_attr( $cat_id ) . '" ' . $selected . '>' . esc_html( $cat->name ) . '</option>';
 				}
 				$html .= '</select>';
 			} else {
@@ -738,9 +801,9 @@ class Blocks {
 				$html .= '<select name="' . esc_attr( $name_tag ) . '" aria-label="' . esc_attr__( 'Tags', 'gb-query-filter' ) . '">';
 				$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 				foreach ( $tags as $tag ) {
-					$tag_id  = (int) $tag->term_id;
+					$tag_id   = (int) $tag->term_id;
 					$selected = in_array( $tag_id, $selected_tags, true ) ? 'selected' : '';
-					$html .= '<option value="' . esc_attr( $tag_id ) . '" ' . $selected . '>' . esc_html( $tag->name ) . '</option>';
+					$html    .= '<option value="' . esc_attr( $tag_id ) . '" ' . $selected . '>' . esc_html( $tag->name ) . '</option>';
 				}
 				$html .= '</select>';
 			} else {
@@ -772,7 +835,7 @@ class Blocks {
 				$html .= '<div class="gbqf-filter-field gbqf-filter-tax gbqf-filter-tax-' . esc_attr( $slug ) . '">';
 				$html .= '<span class="gbqf-filter-label">' . esc_html( $label ) . '</span>';
 
-				$selected_for_tax = isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : [];
+				$selected_for_tax = isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : array();
 
 				if ( 'select' === $extra_control_type ) {
 					$html .= '<select name="' . esc_attr( sprintf( $name_tax_fmt, $slug ) ) . '" aria-label="' . esc_attr( $label ) . '">';
@@ -780,7 +843,7 @@ class Blocks {
 					foreach ( $terms as $term ) {
 						$term_id  = (int) $term->term_id;
 						$selected = in_array( $term_id, $selected_for_tax, true ) ? 'selected' : '';
-						$html .= '<option value="' . esc_attr( $term_id ) . '" ' . $selected . '>' . esc_html( $term->name ) . '</option>';
+						$html    .= '<option value="' . esc_attr( $term_id ) . '" ' . $selected . '>' . esc_html( $term->name ) . '</option>';
 					}
 					$html .= '</select>';
 				} else {
@@ -826,7 +889,7 @@ class Blocks {
 				// then points back at. Either way the name is programmatic; a
 				// group that is merely adjacent to text has no accessible name
 				// at all (ADR-0003).
-				$control_id            = $cid . 'mb_' . $field_id;
+				$control_id             = $cid . 'mb_' . $field_id;
 				$has_labellable_control = ! ( $has_options && ! empty( $options ) && 'radio' === $control_type );
 
 				$html .= '<div class="gbqf-filter-field gbqf-filter-metabox gbqf-filter-metabox-' . esc_attr( $field_id ) . '">';
@@ -862,10 +925,10 @@ class Blocks {
 						$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 
 						foreach ( $options as $opt_value => $opt_label ) {
-							$opt_value      = (string) $opt_value;
-							$opt_label      = is_array( $opt_label ) && isset( $opt_label['label'] ) ? $opt_label['label'] : $opt_label;
-							$selected_attr  = selected( $selected, $opt_value, false );
-							$html          .= '<option value="' . esc_attr( $opt_value ) . '" ' . $selected_attr . '>' . esc_html( $opt_label ) . '</option>';
+							$opt_value     = (string) $opt_value;
+							$opt_label     = is_array( $opt_label ) && isset( $opt_label['label'] ) ? $opt_label['label'] : $opt_label;
+							$selected_attr = selected( $selected, $opt_value, false );
+							$html         .= '<option value="' . esc_attr( $opt_value ) . '" ' . $selected_attr . '>' . esc_html( $opt_label ) . '</option>';
 						}
 
 						$html .= '</select>';
@@ -898,7 +961,7 @@ class Blocks {
 				// had no programmatic association at all (ADR-0003).
 				$control_id             = $cid . 'acf_' . $field_name;
 				$has_labellable_control = ( 'true_false' !== $field_type )
-					&& ! ( $has_choices && ! empty( $choices ) && in_array( $control_type, [ 'checkboxes', 'radio' ], true ) );
+					&& ! ( $has_choices && ! empty( $choices ) && in_array( $control_type, array( 'checkboxes', 'radio' ), true ) );
 
 				$html .= '<div class="gbqf-filter-field gbqf-filter-acf gbqf-filter-acf-' . esc_attr( $field_name ) . '">';
 				$html .= $has_labellable_control
@@ -933,16 +996,16 @@ class Blocks {
 
 					if ( 'checkboxes' === $control_type ) {
 						// Multiple checkbox selections.
-						$selected_array = is_array( $selected ) ? $selected : [];
-						$html .= $group_open;
+						$selected_array = is_array( $selected ) ? $selected : array();
+						$html          .= $group_open;
 
 						foreach ( $choices as $choice_value => $choice_label ) {
 							$choice_value = (string) $choice_value;
-							$is_checked = in_array( $choice_value, $selected_array, true );
-							$html .= '<label class="gbqf-filter-option">';
-							$html .= '<input type="checkbox" name="' . esc_attr( sprintf( $name_meta_arr_fmt, $field_name ) ) . '" value="' . esc_attr( $choice_value ) . '" ' . checked( $is_checked, true, false ) . ' />';
-							$html .= '<span>' . esc_html( $choice_label ) . '</span>';
-							$html .= '</label>';
+							$is_checked   = in_array( $choice_value, $selected_array, true );
+							$html        .= '<label class="gbqf-filter-option">';
+							$html        .= '<input type="checkbox" name="' . esc_attr( sprintf( $name_meta_arr_fmt, $field_name ) ) . '" value="' . esc_attr( $choice_value ) . '" ' . checked( $is_checked, true, false ) . ' />';
+							$html        .= '<span>' . esc_html( $choice_label ) . '</span>';
+							$html        .= '</label>';
 						}
 
 						$html .= '</div>';
@@ -956,10 +1019,10 @@ class Blocks {
 
 						foreach ( $choices as $choice_value => $choice_label ) {
 							$choice_value = (string) $choice_value;
-							$html .= '<label class="gbqf-filter-option">';
-							$html .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="' . esc_attr( $choice_value ) . '" ' . checked( $selected, $choice_value, false ) . ' />';
-							$html .= '<span>' . esc_html( $choice_label ) . '</span>';
-							$html .= '</label>';
+							$html        .= '<label class="gbqf-filter-option">';
+							$html        .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="' . esc_attr( $choice_value ) . '" ' . checked( $selected, $choice_value, false ) . ' />';
+							$html        .= '<span>' . esc_html( $choice_label ) . '</span>';
+							$html        .= '</label>';
 						}
 
 						$html .= '</div>';
@@ -972,9 +1035,9 @@ class Blocks {
 						$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 
 						foreach ( $choices as $choice_value => $choice_label ) {
-							$choice_value = (string) $choice_value;
+							$choice_value  = (string) $choice_value;
 							$selected_attr = selected( $selected, $choice_value, false );
-							$html .= '<option value="' . esc_attr( $choice_value ) . '" ' . $selected_attr . '>' . esc_html( $choice_label ) . '</option>';
+							$html         .= '<option value="' . esc_attr( $choice_value ) . '" ' . $selected_attr . '>' . esc_html( $choice_label ) . '</option>';
 						}
 
 						$html .= '</select>';
@@ -1032,7 +1095,7 @@ class Blocks {
 			return 'text';
 		}
 
-		$field_type = $field['type'];
+		$field_type  = $field['type'];
 		$has_choices = ! empty( $field['choices'] ) && is_array( $field['choices'] );
 
 		switch ( $field_type ) {

@@ -57,13 +57,13 @@ return array(
 	 * `scope_id()` and the field lists come off the matched target key; v2
 	 * proved the scope travels, and this proves the FIELDS travel with it.
 	 */
-	'version' => 4,
+	'version'       => 4,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
 	 * and nothing a sibling blueprint happens to have seeded.
 	 */
-	'category' => array(
+	'category'      => array(
 		'slug' => 'gbqf-fixture',
 		'name' => 'GBQF Fixture',
 	),
@@ -98,8 +98,15 @@ return array(
 	 * {bravo,charlie} overlap in one post but neither contains the other — so a
 	 * result that mixed the two up cannot land on the right count by accident.
 	 */
-	'posts' => array(
-		array( 'slug' => 'gbqf-alpha',   'title' => 'GBQF Alpha',   'meta' => array( 'gbqf_color' => 'red',  'gbqf_size' => 'small' ) ),
+	'posts'         => array(
+		array(
+			'slug'  => 'gbqf-alpha',
+			'title' => 'GBQF Alpha',
+			'meta'  => array(
+				'gbqf_color' => 'red',
+				'gbqf_size'  => 'small',
+			),
+		),
 		/*
 		 * v3.1. `_gbqf_undeclared` is the probe for §9's hardest case, and it
 		 * is deliberately unlike the other two: no filter block declares it, no
@@ -113,9 +120,31 @@ return array(
 		 * unauthenticated visitor confirm or deny arbitrary meta values by
 		 * watching the row count. Both must return 4.
 		 */
-		array( 'slug' => 'gbqf-bravo',   'title' => 'GBQF Bravo',   'meta' => array( 'gbqf_color' => 'blue', 'gbqf_size' => 'large', '_gbqf_undeclared' => 'zulu' ) ),
-		array( 'slug' => 'gbqf-charlie', 'title' => 'GBQF Charlie', 'meta' => array( 'gbqf_color' => 'red',  'gbqf_size' => 'large' ) ),
-		array( 'slug' => 'gbqf-delta',   'title' => 'GBQF Delta',   'meta' => array( 'gbqf_color' => 'blue', 'gbqf_size' => 'small' ) ),
+		array(
+			'slug'  => 'gbqf-bravo',
+			'title' => 'GBQF Bravo',
+			'meta'  => array(
+				'gbqf_color'       => 'blue',
+				'gbqf_size'        => 'large',
+				'_gbqf_undeclared' => 'zulu',
+			),
+		),
+		array(
+			'slug'  => 'gbqf-charlie',
+			'title' => 'GBQF Charlie',
+			'meta'  => array(
+				'gbqf_color' => 'red',
+				'gbqf_size'  => 'large',
+			),
+		),
+		array(
+			'slug'  => 'gbqf-delta',
+			'title' => 'GBQF Delta',
+			'meta'  => array(
+				'gbqf_color' => 'blue',
+				'gbqf_size'  => 'small',
+			),
+		),
 	),
 
 	/*
@@ -134,12 +163,15 @@ return array(
 	 * the label — so a fixture rendering only one of them leaves the other's
 	 * code path unmeasured.
 	 */
-	'fields' => array(
-		'mb' => array(
+	'fields'        => array(
+		'mb'  => array(
 			'id'      => 'gbqf_color',
 			'name'    => 'GBQF Color',
 			'type'    => 'select',
-			'options' => array( 'red' => 'Red', 'blue' => 'Blue' ),
+			'options' => array(
+				'red'  => 'Red',
+				'blue' => 'Blue',
+			),
 		),
 		'acf' => array(
 			// ACF needs a stable field KEY, not just a name. Hardcoded rather
@@ -149,11 +181,14 @@ return array(
 			'name'    => 'gbqf_size',
 			'label'   => 'GBQF Size',
 			'type'    => 'select',
-			'choices' => array( 'small' => 'Small', 'large' => 'Large' ),
+			'choices' => array(
+				'small' => 'Small',
+				'large' => 'Large',
+			),
 		),
 	),
 
-	'page' => array(
+	'page'          => array(
 		'slug'  => 'gbqf-targeting',
 		'title' => 'GBQF targeting matrix',
 	),
@@ -169,26 +204,26 @@ return array(
 	 * They must agree; a divergence between them is its own bug class and is
 	 * not what this fixture is measuring.
 	 */
-	'loops' => array(
-		'control' => array(
+	'loops'         => array(
+		'control'    => array(
 			'id'     => 'gbqf-loop-control',
 			'marker' => 'GBQFX-CONTROL',
 			'class'  => '',
 			'expect' => 'never filtered — no filter block names it (ADR-0001, invariant 2)',
 		),
-		'unscoped' => array(
+		'unscoped'   => array(
 			'id'     => 'gbqf-loop-unscoped',
 			'marker' => 'GBQFX-UNSCOPED',
 			'class'  => '',
 			'expect' => 'open question — an unscoped filter block registers target key \'\', which no non-empty block id can match',
 		),
-		'scoped' => array(
+		'scoped'     => array(
 			'id'     => 'gbqf-loop-scoped',
 			'marker' => 'GBQFX-SCOPED',
 			'class'  => '',
 			'expect' => 'filtered by its own scoped params only',
 		),
-		'legacy' => array(
+		'legacy'     => array(
 			'id'     => 'gbqf-loop-legacy',
 			'marker' => 'GBQFX-LEGACY',
 			'class'  => 'gbqf-target-orphan',
@@ -279,7 +314,7 @@ return array(
 	 * stale-page defect this page exists to pin. `uid` is also the Query's
 	 * pagination key suffix (query-{uid}-page) and its gb-query-{uid} class.
 	 */
-	'paging' => array(
+	'paging'        => array(
 		'page'         => array(
 			'slug'  => 'gbqf-paging',
 			'title' => 'GBQF paging',

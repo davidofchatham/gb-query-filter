@@ -27,27 +27,29 @@ $pass = 0;
 $fail = 0;
 $ok   = function ( $msg ) use ( &$pass ) {
 	WP_CLI::log( '  PASS ' . $msg );
-	$pass++;
+	++$pass;
 };
 $bad  = function ( $msg ) use ( &$fail ) {
 	WP_CLI::log( '  FAIL ' . $msg );
-	$fail++;
+	++$fail;
 };
 
 // --- category ---------------------------------------------------------------
 $term = get_term_by( 'slug', $manifest['category']['slug'], 'category' );
 $term ? $ok( "category {$manifest['category']['slug']} exists" )
-      : $bad( "category {$manifest['category']['slug']} missing" );
+		: $bad( "category {$manifest['category']['slug']} missing" );
 
 // --- posts ------------------------------------------------------------------
 foreach ( $manifest['posts'] as $spec ) {
-	$ids = get_posts( array(
-		'post_type'      => 'post',
-		'name'           => $spec['slug'],
-		'post_status'    => 'publish',
-		'posts_per_page' => 1,
-		'fields'         => 'ids',
-	) );
+	$ids = get_posts(
+		array(
+			'post_type'      => 'post',
+			'name'           => $spec['slug'],
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		)
+	);
 	if ( ! $ids ) {
 		$bad( "post {$spec['slug']} missing or unpublished" );
 		continue;
@@ -66,12 +68,14 @@ foreach ( $manifest['posts'] as $spec ) {
 // that was never authored counts zero — which reads there as "this loop was
 // filtered to nothing", the most interesting possible result, arrived at by
 // accident.
-$pages = get_posts( array(
-	'post_type'      => 'page',
-	'name'           => $manifest['page']['slug'],
-	'post_status'    => 'publish',
-	'posts_per_page' => 1,
-) );
+$pages = get_posts(
+	array(
+		'post_type'      => 'page',
+		'name'           => $manifest['page']['slug'],
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+	)
+);
 
 if ( ! $pages ) {
 	$bad( "page {$manifest['page']['slug']} missing or unpublished" );
@@ -137,11 +141,11 @@ if ( ! $pages ) {
 // Three separate things can be missing, and they fail the HTTP harness in ways
 // that look nothing like each other:
 //
-//   values not seeded   -> field filters return 0 rows, not 2
-//   field not REGISTERED-> control renders without options; the filter still
-//                          works, so only section 6 notices
-//   ownership not on the-> the owned-field sections report 4 (skipped as
-//   block attributes       unowned) while section 9 passes for the wrong reason
+// values not seeded   -> field filters return 0 rows, not 2
+// field not REGISTERED-> control renders without options; the filter still
+// works, so only section 6 notices
+// ownership not on the-> the owned-field sections report 4 (skipped as
+// block attributes       unowned) while section 9 passes for the wrong reason
 //
 // The third is the nastiest: section 9 asserts a field does NOT filter, so a
 // fixture that declared no ownership at all makes it pass trivially. Assert the
@@ -149,13 +153,15 @@ if ( ! $pages ) {
 $fields = $manifest['fields'];
 
 foreach ( $manifest['posts'] as $spec ) {
-	$ids = get_posts( array(
-		'post_type'      => 'post',
-		'name'           => $spec['slug'],
-		'post_status'    => 'publish',
-		'posts_per_page' => 1,
-		'fields'         => 'ids',
-	) );
+	$ids = get_posts(
+		array(
+			'post_type'      => 'post',
+			'name'           => $spec['slug'],
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		)
+	);
 	if ( ! $ids ) {
 		continue; // already reported above
 	}
@@ -172,11 +178,14 @@ foreach ( $manifest['posts'] as $spec ) {
 // asserts 2 rows for each field filter, and that number is only correct while
 // the values split the posts evenly. A manifest edit that broke the split would
 // otherwise surface as a mysterious render-surface.sh failure.
-foreach ( array( 'gbqf_color' => 'red', 'gbqf_size' => 'large' ) as $split_key => $split_value ) {
+foreach ( array(
+	'gbqf_color' => 'red',
+	'gbqf_size'  => 'large',
+) as $split_key => $split_value ) {
 	$matching = 0;
 	foreach ( $manifest['posts'] as $spec ) {
 		if ( isset( $spec['meta'][ $split_key ] ) && $spec['meta'][ $split_key ] === $split_value ) {
-			$matching++;
+			++$matching;
 		}
 	}
 	2 === $matching
@@ -219,13 +228,15 @@ if ( function_exists( 'acf_get_field' ) ) {
 // Ownership, as authored into the page. Read from the page content for the same
 // reason the targeting assertions above are: it is what the block will actually
 // be rendered with.
-$page_ids = get_posts( array(
-	'post_type'      => 'page',
-	'name'           => $manifest['page']['slug'],
-	'post_status'    => 'publish',
-	'posts_per_page' => 1,
-	'fields'         => 'ids',
-) );
+$page_ids = get_posts(
+	array(
+		'post_type'      => 'page',
+		'name'           => $manifest['page']['slug'],
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+	)
+);
 
 if ( $page_ids ) {
 	$page_content = get_post_field( 'post_content', $page_ids[0] );

@@ -55,7 +55,7 @@ final class Plugin {
 		$this->includes();
 
 		// All plugin hooks bootstrap from here.
-		add_action( 'plugins_loaded', [ $this, 'init' ] );
+		add_action( 'plugins_loaded', array( $this, 'init' ) );
 	}
 
 	/**
@@ -76,7 +76,7 @@ final class Plugin {
 	public function init() {
 
 		// Initialize blocks.
-		$this->blocks  = new Blocks();
+		$this->blocks = new Blocks();
 
 		// Initialize filters.
 		$this->filters = new Filters();

@@ -37,7 +37,7 @@ class Params {
 			&& is_array( $_GET['gbqf'][ $target_id ] ) ) {
 			$this->data = (array) wp_unslash( $_GET['gbqf'][ $target_id ] );
 		} else {
-			$this->data = [];
+			$this->data = array();
 		}
 	}
 
@@ -64,14 +64,14 @@ class Params {
 	 */
 	public function get_cat_ids() {
 		if ( $this->is_scoped ) {
-			$raw = isset( $this->data['cat'] ) ? (array) $this->data['cat'] : [];
+			$raw = isset( $this->data['cat'] ) ? (array) $this->data['cat'] : array();
 		} else {
 			if ( ! isset( $_GET['gbqf_cat'] ) ) {
-				return [];
+				return array();
 			}
 			$raw = wp_unslash( $_GET['gbqf_cat'] );
 			if ( ! is_array( $raw ) ) {
-				$raw = [ $raw ];
+				$raw = array( $raw );
 			}
 		}
 		return array_values( array_filter( array_map( 'absint', $raw ) ) );
@@ -84,14 +84,14 @@ class Params {
 	 */
 	public function get_tag_ids() {
 		if ( $this->is_scoped ) {
-			$raw = isset( $this->data['tag'] ) ? (array) $this->data['tag'] : [];
+			$raw = isset( $this->data['tag'] ) ? (array) $this->data['tag'] : array();
 		} else {
 			if ( ! isset( $_GET['gbqf_tag'] ) ) {
-				return [];
+				return array();
 			}
 			$raw = wp_unslash( $_GET['gbqf_tag'] );
 			if ( ! is_array( $raw ) ) {
-				$raw = [ $raw ];
+				$raw = array( $raw );
 			}
 		}
 		return array_values( array_filter( array_map( 'absint', $raw ) ) );
@@ -105,21 +105,21 @@ class Params {
 	public function get_tax_terms() {
 		if ( $this->is_scoped ) {
 			$raw_tax = ( isset( $this->data['tax'] ) && is_array( $this->data['tax'] ) )
-				? $this->data['tax'] : [];
+				? $this->data['tax'] : array();
 		} else {
 			if ( ! isset( $_GET['gbqf_tax'] ) || ! is_array( $_GET['gbqf_tax'] ) ) {
-				return [];
+				return array();
 			}
 			$raw_tax = wp_unslash( $_GET['gbqf_tax'] );
 		}
-		$result = [];
+		$result = array();
 		foreach ( $raw_tax as $slug => $term_ids ) {
 			$slug = sanitize_key( $slug );
 			if ( '' === $slug ) {
 				continue;
 			}
 			if ( ! is_array( $term_ids ) ) {
-				$term_ids = [ $term_ids ];
+				$term_ids = array( $term_ids );
 			}
 			$ids = array_values( array_filter( array_map( 'absint', $term_ids ) ) );
 			if ( ! empty( $ids ) ) {
@@ -139,11 +139,11 @@ class Params {
 		if ( $this->is_scoped ) {
 			return ( isset( $this->data['meta'] ) && is_array( $this->data['meta'] ) )
 				? (array) $this->data['meta']
-				: [];
+				: array();
 		}
 		return ( isset( $_GET['gbqf_meta'] ) && is_array( $_GET['gbqf_meta'] ) )
 			? wp_unslash( $_GET['gbqf_meta'] )
-			: [];
+			: array();
 	}
 
 	/**
@@ -170,23 +170,23 @@ class Params {
 	public function get_field_names() {
 		if ( $this->is_scoped ) {
 			$p = 'gbqf[' . $this->target_id . ']';
-			return [
+			return array(
 				'search'       => $p . '[search]',
 				'cat'          => $p . '[cat][]',
 				'tag'          => $p . '[tag][]',
 				'tax_fmt'      => $p . '[tax][%s][]',
 				'meta_fmt'     => $p . '[meta][%s]',
 				'meta_arr_fmt' => $p . '[meta][%s][]',
-			];
+			);
 		}
-		return [
+		return array(
 			'search'       => 'gbqf_search',
 			'cat'          => 'gbqf_cat[]',
 			'tag'          => 'gbqf_tag[]',
 			'tax_fmt'      => 'gbqf_tax[%s][]',
 			'meta_fmt'     => 'gbqf_meta[%s]',
 			'meta_arr_fmt' => 'gbqf_meta[%s][]',
-		];
+		);
 	}
 
 	/**
@@ -235,7 +235,7 @@ class Params {
 
 		return remove_query_arg(
 			array_merge(
-				[ 'gbqf_search', 'gbqf_cat', 'gbqf_tag', 'gbqf_meta', 'gbqf_tax', 'gbqf_acf' ],
+				array( 'gbqf_search', 'gbqf_cat', 'gbqf_tag', 'gbqf_meta', 'gbqf_tax', 'gbqf_acf' ),
 				$page_keys
 			),
 			$current_url

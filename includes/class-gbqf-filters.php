@@ -37,7 +37,7 @@ class Filters {
 	 * @param string $message Message to log.
 	 * @param array  $data    Optional data to include.
 	 */
-	protected function debug_log( $message, $data = [] ) {
+	protected function debug_log( $message, $data = array() ) {
 		if ( ! apply_filters( 'gbqf_enable_debug_logging', false ) ) {
 			return;
 		}
@@ -58,16 +58,16 @@ class Filters {
 		// Passing Settings::get_filter_scope() here would freeze the
 		// `gbqf_filter_scope` filter at plugins_loaded, before themes and
 		// before init — silently ignoring the documented way to set it.
-		$this->targeting        = new Targeting();
+		$this->targeting = new Targeting();
 
 		// Get filter priority - default 20 (runs after most query-modifying plugins).
 		$priority = Settings::get_filter_priority();
 
 		// GenerateBlocks 1.x / original Query Loop filter.
-		add_filter( 'generateblocks_query_loop_args', [ $this, 'apply_filters_to_gb_query' ], $priority, 2 );
+		add_filter( 'generateblocks_query_loop_args', array( $this, 'apply_filters_to_gb_query' ), $priority, 2 );
 
 		// GenerateBlocks 2.0+ filter (WP_Query args).
-		add_filter( 'generateblocks_query_wp_query_args', [ $this, 'apply_filters_to_gb_query_v2' ], $priority, 4 );
+		add_filter( 'generateblocks_query_wp_query_args', array( $this, 'apply_filters_to_gb_query_v2' ), $priority, 4 );
 	}
 
 	/**
@@ -84,13 +84,13 @@ class Filters {
 	 * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
 	 * @return array[] Array of [ 'key' => string, 'value' => string ].
 	 */
-	protected function get_meta_filters( $allowed_field_names = [], $raw_meta = [] ) {
+	protected function get_meta_filters( $allowed_field_names = array(), $raw_meta = array() ) {
 		if ( ! $this->meta_box_enabled ) {
-			return [];
+			return array();
 		}
 
 		if ( empty( $raw_meta ) ) {
-			return [];
+			return array();
 		}
 
 		// An empty ownership list means the block declared NO Meta Box fields,
@@ -107,10 +107,10 @@ class Filters {
 		//
 		// Covered by render-surface.sh section 9.
 		if ( empty( $allowed_field_names ) ) {
-			return [];
+			return array();
 		}
 
-		$filters = [];
+		$filters = array();
 
 		foreach ( $raw_meta as $key => $value ) {
 			$key = sanitize_key( $key );
@@ -127,10 +127,10 @@ class Filters {
 				continue;
 			}
 
-			$filters[] = [
+			$filters[] = array(
 				'key'   => $key,
 				'value' => $value,
-			];
+			);
 		}
 
 		return $filters;
@@ -153,22 +153,22 @@ class Filters {
 	 * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
 	 * @return array[] Array of [ 'key' => string, 'value' => string|array, 'compare' => string ].
 	 */
-	protected function get_acf_filters( $allowed_field_names = [], $raw_meta = [] ) {
+	protected function get_acf_filters( $allowed_field_names = array(), $raw_meta = array() ) {
 		if ( ! $this->acf_enabled ) {
-			return [];
+			return array();
 		}
 
 		if ( empty( $raw_meta ) ) {
-			return [];
+			return array();
 		}
 
 		// Owns nothing, filters nothing. Same rule and same reason as
 		// get_meta_filters() — see the comment there.
 		if ( empty( $allowed_field_names ) ) {
-			return [];
+			return array();
 		}
 
-		$filters = [];
+		$filters = array();
 
 		foreach ( $raw_meta as $field_name => $value ) {
 			$field_name = sanitize_key( $field_name );
@@ -189,11 +189,11 @@ class Filters {
 
 				// For each checkbox value, add a LIKE query for serialized array matching.
 				foreach ( $value as $single_value ) {
-					$filters[] = [
+					$filters[] = array(
 						'key'     => $field_name,
 						'value'   => serialize( strval( $single_value ) ),
 						'compare' => 'LIKE',
-					];
+					);
 				}
 			} else {
 				// Single value (select, radio, text).
@@ -203,10 +203,10 @@ class Filters {
 					continue;
 				}
 
-				$filters[] = [
+				$filters[] = array(
 					'key'   => $field_name,
 					'value' => $value,
-				];
+				);
 			}
 		}
 
@@ -267,7 +267,7 @@ class Filters {
 		if ( ! empty( $cat_ids ) ) {
 
 			if ( ! empty( $query_args['category__in'] ) ) {
-				$existing = (array) $query_args['category__in'];
+				$existing                   = (array) $query_args['category__in'];
 				$query_args['category__in'] = array_unique(
 					array_merge( $existing, $cat_ids )
 				);
@@ -280,7 +280,7 @@ class Filters {
 		if ( ! empty( $tag_ids ) ) {
 
 			if ( ! empty( $query_args['tag__in'] ) ) {
-				$existing = (array) $query_args['tag__in'];
+				$existing              = (array) $query_args['tag__in'];
 				$query_args['tag__in'] = array_unique(
 					array_merge( $existing, $tag_ids )
 				);
@@ -291,7 +291,7 @@ class Filters {
 
 		// Apply extra taxonomy filters via tax_query.
 		if ( ! empty( $extra_tax ) ) {
-			$tax_query = [];
+			$tax_query = array();
 
 			if ( ! empty( $query_args['tax_query'] ) && is_array( $query_args['tax_query'] ) ) {
 				$tax_query = $query_args['tax_query'];
@@ -304,12 +304,12 @@ class Filters {
 			}
 
 			foreach ( $extra_tax as $taxonomy => $term_ids ) {
-				$tax_query[] = [
+				$tax_query[] = array(
 					'taxonomy' => $taxonomy,
 					'field'    => 'term_id',
 					'terms'    => $term_ids,
 					'operator' => 'IN',
-				];
+				);
 			}
 
 			$query_args['tax_query'] = $tax_query;
@@ -317,7 +317,7 @@ class Filters {
 
 		// Apply meta filters (Meta Box fields).
 		if ( ! empty( $meta_filters ) ) {
-			$meta_query = [];
+			$meta_query = array();
 
 			if ( ! empty( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] ) ) {
 				$meta_query = $query_args['meta_query'];
@@ -330,10 +330,10 @@ class Filters {
 			}
 
 			foreach ( $meta_filters as $filter ) {
-				$meta_query[] = [
+				$meta_query[] = array(
 					'key'   => $filter['key'],
 					'value' => $filter['value'],
-				];
+				);
 			}
 
 			$query_args['meta_query'] = $meta_query;
@@ -341,7 +341,7 @@ class Filters {
 
 		// Apply ACF filters (if any).
 		if ( ! empty( $acf_filters ) ) {
-			$meta_query = [];
+			$meta_query = array();
 
 			if ( ! empty( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] ) ) {
 				$meta_query = $query_args['meta_query'];
@@ -354,10 +354,10 @@ class Filters {
 			}
 
 			foreach ( $acf_filters as $filter ) {
-				$meta_clause = [
+				$meta_clause = array(
 					'key'   => $filter['key'],
 					'value' => $filter['value'],
-				];
+				);
 
 				// Add compare operator if specified (for LIKE queries).
 				if ( isset( $filter['compare'] ) ) {
@@ -378,10 +378,10 @@ class Filters {
 	/**
 	 * Apply filters to GenerateBlocks 2.0+ Query WP_Query args.
 	 *
-	 * @param array        $query_args Existing WP_Query args.
-	 * @param array        $attributes Block attributes.
-	 * @param array|null   $block      Block data (not needed here).
-	 * @param int|string   $query_id   GB query id (not needed here).
+	 * @param array      $query_args Existing WP_Query args.
+	 * @param array      $attributes Block attributes.
+	 * @param array|null $block      Block data (not needed here).
+	 * @param int|string $query_id   GB query id (not needed here).
 	 * @return array
 	 */
 	public function apply_filters_to_gb_query_v2( $query_args, $attributes, $block, $query_id ) {
