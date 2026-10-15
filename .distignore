@@ -12,3 +12,7 @@
 CONTEXT.md
 docs/adr
 tools
+composer.json
+composer.lock
+phpcs.xml
+vendor

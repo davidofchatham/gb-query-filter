@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<ruleset name="GB Query Filter">
+	<description>WordPress coding standards for GB Query Filter.</description>
+
+	<file>gb-query-filter.php</file>
+	<file>includes</file>
+	<file>tools</file>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="ps"/>
+
+	<rule ref="WordPress-Extra"/>
+	<rule ref="WordPress-Docs"/>
+
+	<config name="minimum_wp_version" value="6.0"/>
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="gb-query-filter"/>
+			</property>
+		</properties>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="gbqf"/>
+				<element value="GBQF"/>
+			</property>
+		</properties>
+	</rule>
+	<!-- Declined rules. Every exclude carries its reason. -->
+
+	<!-- Classes are namespaced (GBQF\Blocks), so class-gbqf-blocks.php is the deliberate name; renaming files would only add churn. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+
+	<!-- Hook callbacks must accept the full signature WordPress or GenerateBlocks passes, used or not. -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed">
+		<severity>0</severity>
+	</rule>
+
+	<!-- Filter state is public, read-only GET data (ADR-0002); there is no form submission to protect with a nonce. -->
+	<rule ref="WordPress.Security.NonceVerification.Recommended">
+		<exclude-pattern>*/includes/class-gbqf-params.php</exclude-pattern>
+	</rule>
+
+	<!-- tools/ holds WP-CLI eval-file scripts: file-scope variables are the language there, and they write stub files directly. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound">
+		<exclude-pattern>*/tools/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.GlobalVariablesOverride.Prohibited">
+		<exclude-pattern>*/tools/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>*/tools/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.NoSilencedErrors">
+		<exclude-pattern>*/tools/*</exclude-pattern>
+	</rule>
+</ruleset>

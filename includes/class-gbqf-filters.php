@@ -1,8 +1,14 @@
 <?php
+/**
+ * Applies URL-based filters to GenerateBlocks queries.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 /**
@@ -10,381 +16,387 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Filters {
 
-    /**
-     * Decides which Query Loops this instance may touch.
-     *
-     * @var Targeting
-     */
-    protected $targeting;
+	/**
+	 * Decides which Query Loops this instance may touch.
+	 *
+	 * @var Targeting
+	 */
+	protected $targeting;
 
-    /**
-     * Whether Meta Box integration is enabled from settings.
-     *
-     * @var bool
-     */
-    protected $meta_box_enabled;
+	/**
+	 * Whether Meta Box integration is enabled from settings.
+	 *
+	 * @var bool
+	 */
+	protected $meta_box_enabled;
 
-    /**
-     * Whether ACF integration is enabled from settings.
-     *
-     * @var bool
-     */
-    protected $acf_enabled;
+	/**
+	 * Whether ACF integration is enabled from settings.
+	 *
+	 * @var bool
+	 */
+	protected $acf_enabled;
 
-    /**
-     * Debug logging helper.
-     *
-     * @param string $message Message to log.
-     * @param array  $data    Optional data to include.
-     */
-    protected function debug_log( $message, $data = [] ) {
-        if ( ! apply_filters( 'gbqf_enable_debug_logging', false ) ) {
-            return;
-        }
+	/**
+	 * Debug logging helper.
+	 *
+	 * @param string $message Message to log.
+	 * @param array  $data    Optional data to include.
+	 */
+	protected function debug_log( $message, $data = array() ) {
+		if ( ! apply_filters( 'gbqf_enable_debug_logging', false ) ) {
+			return;
+		}
 
-        error_log(
-            sprintf(
-                '[GB Query Filter] %s: %s',
-                $message,
-                print_r( $data, true )
-            )
-        );
-    }
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging, gated by the gbqf_enable_debug_logging filter.
+		error_log(
+			sprintf(
+				'[GB Query Filter] %s: %s',
+				$message,
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging, gated by the gbqf_enable_debug_logging filter.
+				print_r( $data, true )
+			)
+		);
+	}
 
-    public function __construct() {
-        $this->meta_box_enabled = Settings::is_metabox_enabled();
-        $this->acf_enabled      = Settings::is_acf_enabled();
-        // No scope argument: Targeting resolves it per loop, at render time.
-        // Passing Settings::get_filter_scope() here would freeze the
-        // `gbqf_filter_scope` filter at plugins_loaded, before themes and
-        // before init — silently ignoring the documented way to set it.
-        $this->targeting        = new Targeting();
+	/**
+	 * Read integration settings and hook the query filters.
+	 */
+	public function __construct() {
+		$this->meta_box_enabled = Settings::is_metabox_enabled();
+		$this->acf_enabled      = Settings::is_acf_enabled();
+		// No scope argument: Targeting resolves it per loop, at render time.
+		// Passing Settings::get_filter_scope() here would freeze the
+		// `gbqf_filter_scope` filter at plugins_loaded, before themes and
+		// before init — silently ignoring the documented way to set it.
+		$this->targeting = new Targeting();
 
-        // Get filter priority - default 20 (runs after most query-modifying plugins).
-        $priority = Settings::get_filter_priority();
+		// Get filter priority - default 20 (runs after most query-modifying plugins).
+		$priority = Settings::get_filter_priority();
 
-        // GenerateBlocks 1.x / original Query Loop filter.
-        add_filter( 'generateblocks_query_loop_args', [ $this, 'apply_filters_to_gb_query' ], $priority, 2 );
+		// GenerateBlocks 1.x / original Query Loop filter.
+		add_filter( 'generateblocks_query_loop_args', array( $this, 'apply_filters_to_gb_query' ), $priority, 2 );
 
-        // GenerateBlocks 2.0+ filter (WP_Query args).
-        add_filter( 'generateblocks_query_wp_query_args', [ $this, 'apply_filters_to_gb_query_v2' ], $priority, 4 );
-    }
+		// GenerateBlocks 2.0+ filter (WP_Query args).
+		add_filter( 'generateblocks_query_wp_query_args', array( $this, 'apply_filters_to_gb_query_v2' ), $priority, 4 );
+	}
 
-    /**
-     * Get Meta Box meta filters from the unified meta parameter array.
-     *
-     * Both Meta Box and ACF fields share the gbqf_meta namespace (scoped or flat).
-     * This method only processes keys that belong to configured Meta Box fields.
-     *
-     * Format (flat):   gbqf_meta[meta_key]=value
-     * Format (scoped): gbqf[target][meta][meta_key]=value
-     *
-     * @param string[] $allowed_field_names Meta Box field IDs owned by this block.
-     *                                      EMPTY MEANS OWNS NOTHING — see below.
-     * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
-     * @return array[] Array of [ 'key' => string, 'value' => string ].
-     */
-    protected function get_meta_filters( $allowed_field_names = [], $raw_meta = [] ) {
-        if ( ! $this->meta_box_enabled ) {
-            return [];
-        }
+	/**
+	 * Get Meta Box meta filters from the unified meta parameter array.
+	 *
+	 * Both Meta Box and ACF fields share the gbqf_meta namespace (scoped or flat).
+	 * This method only processes keys that belong to configured Meta Box fields.
+	 *
+	 * Format (flat):   gbqf_meta[meta_key]=value
+	 * Format (scoped): gbqf[target][meta][meta_key]=value
+	 *
+	 * @param string[] $allowed_field_names Meta Box field IDs owned by this block.
+	 *                                      EMPTY MEANS OWNS NOTHING — see below.
+	 * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
+	 * @return array[] Array of [ 'key' => string, 'value' => string ].
+	 */
+	protected function get_meta_filters( $allowed_field_names = array(), $raw_meta = array() ) {
+		if ( ! $this->meta_box_enabled ) {
+			return array();
+		}
 
-        if ( empty( $raw_meta ) ) {
-            return [];
-        }
+		if ( empty( $raw_meta ) ) {
+			return array();
+		}
 
-        // An empty ownership list means the block declared NO Meta Box fields,
-        // so it filters on none. This used to fall through to "process every
-        // key" (documented as legacy behaviour), which made any meta key in the
-        // URL filterable through a loop the block legitimately claimed —
-        // including protected `_`-prefixed keys the site never exposed. A
-        // correct guess narrowed the loop and a wrong one emptied it, which is a
-        // value oracle over arbitrary post meta and breaks security invariant 1
-        // in CONTEXT.md.
-        //
-        // The default filter block enables no custom-field filtering at all, so
-        // the vulnerable list was the DEFAULT one, not an edge case.
-        //
-        // Covered by render-surface.sh section 9.
-        if ( empty( $allowed_field_names ) ) {
-            return [];
-        }
+		// An empty ownership list means the block declared NO Meta Box fields,
+		// so it filters on none. This used to fall through to "process every
+		// key" (documented as legacy behaviour), which made any meta key in the
+		// URL filterable through a loop the block legitimately claimed —
+		// including protected `_`-prefixed keys the site never exposed. A
+		// correct guess narrowed the loop and a wrong one emptied it, which is a
+		// value oracle over arbitrary post meta and breaks security invariant 1
+		// in CONTEXT.md.
+		//
+		// The default filter block enables no custom-field filtering at all, so
+		// the vulnerable list was the DEFAULT one, not an edge case.
+		//
+		// Covered by render-surface.sh section 9.
+		if ( empty( $allowed_field_names ) ) {
+			return array();
+		}
 
-        $filters = [];
+		$filters = array();
 
-        foreach ( $raw_meta as $key => $value ) {
-            $key = sanitize_key( $key );
+		foreach ( $raw_meta as $key => $value ) {
+			$key = sanitize_key( $key );
 
-            // Skip keys not belonging to this block's Meta Box fields.
-            if ( ! in_array( $key, $allowed_field_names, true ) ) {
-                continue;
-            }
+			// Skip keys not belonging to this block's Meta Box fields.
+			if ( ! in_array( $key, $allowed_field_names, true ) ) {
+				continue;
+			}
 
-            $value = is_array( $value ) ? reset( $value ) : $value;
-            $value = sanitize_text_field( $value );
+			$value = is_array( $value ) ? reset( $value ) : $value;
+			$value = sanitize_text_field( $value );
 
-            if ( '' === $key || '' === $value ) {
-                continue;
-            }
+			if ( '' === $key || '' === $value ) {
+				continue;
+			}
 
-            $filters[] = [
-                'key'   => $key,
-                'value' => $value,
-            ];
-        }
+			$filters[] = array(
+				'key'   => $key,
+				'value' => $value,
+			);
+		}
 
-        return $filters;
-    }
+		return $filters;
+	}
 
-    /**
-     * Get ACF filters from the unified meta parameter array.
-     *
-     * Both Meta Box and ACF fields share the gbqf_meta namespace (scoped or flat).
-     * This method only processes keys that belong to configured ACF fields.
-     * ACF checkbox fields (multi-value) use LIKE comparison against serialized values.
-     *
-     * Format (flat, single):   gbqf_meta[field_name]=value
-     * Format (flat, multi):    gbqf_meta[field_name][]=value1&gbqf_meta[field_name][]=value2
-     * Format (scoped, single): gbqf[target][meta][field_name]=value
-     * Format (scoped, multi):  gbqf[target][meta][field_name][]=value1&...
-     *
-     * @param string[] $allowed_field_names ACF field names owned by this block.
-     *                                      EMPTY MEANS OWNS NOTHING — see get_meta_filters().
-     * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
-     * @return array[] Array of [ 'key' => string, 'value' => string|array, 'compare' => string ].
-     */
-    protected function get_acf_filters( $allowed_field_names = [], $raw_meta = [] ) {
-        if ( ! $this->acf_enabled ) {
-            return [];
-        }
+	/**
+	 * Get ACF filters from the unified meta parameter array.
+	 *
+	 * Both Meta Box and ACF fields share the gbqf_meta namespace (scoped or flat).
+	 * This method only processes keys that belong to configured ACF fields.
+	 * ACF checkbox fields (multi-value) use LIKE comparison against serialized values.
+	 *
+	 * Format (flat, single):   gbqf_meta[field_name]=value
+	 * Format (flat, multi):    gbqf_meta[field_name][]=value1&gbqf_meta[field_name][]=value2
+	 * Format (scoped, single): gbqf[target][meta][field_name]=value
+	 * Format (scoped, multi):  gbqf[target][meta][field_name][]=value1&...
+	 *
+	 * @param string[] $allowed_field_names ACF field names owned by this block.
+	 *                                      EMPTY MEANS OWNS NOTHING — see get_meta_filters().
+	 * @param array    $raw_meta            Pre-fetched raw meta array (from Params::get_meta()).
+	 * @return array[] Array of [ 'key' => string, 'value' => string|array, 'compare' => string ].
+	 */
+	protected function get_acf_filters( $allowed_field_names = array(), $raw_meta = array() ) {
+		if ( ! $this->acf_enabled ) {
+			return array();
+		}
 
-        if ( empty( $raw_meta ) ) {
-            return [];
-        }
+		if ( empty( $raw_meta ) ) {
+			return array();
+		}
 
-        // Owns nothing, filters nothing. Same rule and same reason as
-        // get_meta_filters() — see the comment there.
-        if ( empty( $allowed_field_names ) ) {
-            return [];
-        }
+		// Owns nothing, filters nothing. Same rule and same reason as
+		// get_meta_filters() — see the comment there.
+		if ( empty( $allowed_field_names ) ) {
+			return array();
+		}
 
-        $filters = [];
+		$filters = array();
 
-        foreach ( $raw_meta as $field_name => $value ) {
-            $field_name = sanitize_key( $field_name );
+		foreach ( $raw_meta as $field_name => $value ) {
+			$field_name = sanitize_key( $field_name );
 
-            // Skip keys not belonging to this block's ACF fields.
-            if ( ! in_array( $field_name, $allowed_field_names, true ) ) {
-                continue;
-            }
+			// Skip keys not belonging to this block's ACF fields.
+			if ( ! in_array( $field_name, $allowed_field_names, true ) ) {
+				continue;
+			}
 
-            // Handle multi-value (checkboxes).
-            if ( is_array( $value ) ) {
-                $value = array_map( 'sanitize_text_field', $value );
-                $value = array_filter( $value );
+			// Handle multi-value (checkboxes).
+			if ( is_array( $value ) ) {
+				$value = array_map( 'sanitize_text_field', $value );
+				$value = array_filter( $value );
 
-                if ( empty( $value ) ) {
-                    continue;
-                }
+				if ( empty( $value ) ) {
+					continue;
+				}
 
-                // For each checkbox value, add a LIKE query for serialized array matching.
-                foreach ( $value as $single_value ) {
-                    $filters[] = [
-                        'key'     => $field_name,
-                        'value'   => serialize( strval( $single_value ) ),
-                        'compare' => 'LIKE',
-                    ];
-                }
-            } else {
-                // Single value (select, radio, text).
-                $value = sanitize_text_field( $value );
+				// For each checkbox value, add a LIKE query for serialized array matching.
+				foreach ( $value as $single_value ) {
+					$filters[] = array(
+						'key'     => $field_name,
+						// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Matches how WordPress stores array meta values.
+						'value'   => serialize( strval( $single_value ) ),
+						'compare' => 'LIKE',
+					);
+				}
+			} else {
+				// Single value (select, radio, text).
+				$value = sanitize_text_field( $value );
 
-                if ( '' === $value ) {
-                    continue;
-                }
+				if ( '' === $value ) {
+					continue;
+				}
 
-                $filters[] = [
-                    'key'   => $field_name,
-                    'value' => $value,
-                ];
-            }
-        }
+				$filters[] = array(
+					'key'   => $field_name,
+					'value' => $value,
+				);
+			}
+		}
 
-        return $filters;
-    }
+		return $filters;
+	}
 
-    /**
-     * Apply search + taxonomy + meta filters to GenerateBlocks Query Loop args (GB 1.x style).
-     *
-     * @param array $query_args Existing query args.
-     * @param array $attributes Block attributes.
-     * @return array
-     */
-    public function apply_filters_to_gb_query( $query_args, $attributes ) {
-        // One question, one answer. null means this loop is not ours to touch;
-        // anything else carries both the permission and the context.
-        //
-        // Do not reintroduce a separate "may I?" check here. This used to be a
-        // gate plus a second lookup that re-derived the same match, and the two
-        // disagreed — which filtered a Query Loop no filter block had claimed
-        // (security invariant 2). See ADR-0001 and Targeting's class docblock.
-        $target = $this->targeting->match( $attributes );
+	/**
+	 * Apply search + taxonomy + meta filters to GenerateBlocks Query Loop args (GB 1.x style).
+	 *
+	 * @param array $query_args Existing query args.
+	 * @param array $attributes Block attributes.
+	 * @return array
+	 */
+	public function apply_filters_to_gb_query( $query_args, $attributes ) {
+		// One question, one answer. null means this loop is not ours to touch;
+		// anything else carries both the permission and the context.
+		//
+		// Do not reintroduce a separate "may I?" check here. This used to be a
+		// gate plus a second lookup that re-derived the same match, and the two
+		// disagreed — which filtered a Query Loop no filter block had claimed
+		// (security invariant 2). See ADR-0001 and Targeting's class docblock.
+		$target = $this->targeting->match( $attributes );
 
-        if ( null === $target ) {
-            return $query_args;
-        }
+		if ( null === $target ) {
+			return $query_args;
+		}
 
-        $this->debug_log( 'Query args before GBQF (GB 1.x)', $query_args );
+		$this->debug_log( 'Query args before GBQF (GB 1.x)', $query_args );
 
-        // scope_id() is the key the matching filter block REGISTERED — never
-        // this loop's own HTML id. They differ whenever the match was by class,
-        // and reading the loop's id there is exactly the bug that made
-        // class-based targeting a silent no-op before 0.4.0.
-        $params       = new \GBQF\Params( $target->scope_id() );
-        $search       = $params->get_search();
-        $cat_ids      = $params->get_cat_ids();
-        $tag_ids      = $params->get_tag_ids();
-        $extra_tax    = $params->get_tax_terms();
-        $raw_meta     = $params->get_meta();
-        $meta_filters = $this->get_meta_filters( $target->mb_fields(), $raw_meta );
-        $acf_filters  = $this->get_acf_filters( $target->acf_fields(), $raw_meta );
+		// scope_id() is the key the matching filter block REGISTERED — never
+		// this loop's own HTML id. They differ whenever the match was by class,
+		// and reading the loop's id there is exactly the bug that made
+		// class-based targeting a silent no-op before 0.4.0.
+		$params       = new \GBQF\Params( $target->scope_id() );
+		$search       = $params->get_search();
+		$cat_ids      = $params->get_cat_ids();
+		$tag_ids      = $params->get_tag_ids();
+		$extra_tax    = $params->get_tax_terms();
+		$raw_meta     = $params->get_meta();
+		$meta_filters = $this->get_meta_filters( $target->mb_fields(), $raw_meta );
+		$acf_filters  = $this->get_acf_filters( $target->acf_fields(), $raw_meta );
 
-        // Apply search (with optional preservation of existing search terms).
-        if ( '' !== $search ) {
-            $preserve = Settings::should_preserve_search();
+		// Apply search (with optional preservation of existing search terms).
+		if ( '' !== $search ) {
+			$preserve = Settings::should_preserve_search();
 
-            if ( $preserve && ! empty( $query_args['s'] ) ) {
-                // Combine search terms (WordPress uses AND logic).
-                $existing        = trim( $query_args['s'] );
-                $query_args['s'] = $existing . ' ' . $search;
-            } else {
-                // Default: replace existing search (if any).
-                $query_args['s'] = $search;
-            }
-        }
+			if ( $preserve && ! empty( $query_args['s'] ) ) {
+				// Combine search terms (WordPress uses AND logic).
+				$existing        = trim( $query_args['s'] );
+				$query_args['s'] = $existing . ' ' . $search;
+			} else {
+				// Default: replace existing search (if any).
+				$query_args['s'] = $search;
+			}
+		}
 
-        // Apply categories (if any selected).
-        if ( ! empty( $cat_ids ) ) {
+		// Apply categories (if any selected).
+		if ( ! empty( $cat_ids ) ) {
 
-            if ( ! empty( $query_args['category__in'] ) ) {
-                $existing = (array) $query_args['category__in'];
-                $query_args['category__in'] = array_unique(
-                    array_merge( $existing, $cat_ids )
-                );
-            } else {
-                $query_args['category__in'] = $cat_ids;
-            }
-        }
+			if ( ! empty( $query_args['category__in'] ) ) {
+				$existing                   = (array) $query_args['category__in'];
+				$query_args['category__in'] = array_unique(
+					array_merge( $existing, $cat_ids )
+				);
+			} else {
+				$query_args['category__in'] = $cat_ids;
+			}
+		}
 
-        // Apply tags (if any selected).
-        if ( ! empty( $tag_ids ) ) {
+		// Apply tags (if any selected).
+		if ( ! empty( $tag_ids ) ) {
 
-            if ( ! empty( $query_args['tag__in'] ) ) {
-                $existing = (array) $query_args['tag__in'];
-                $query_args['tag__in'] = array_unique(
-                    array_merge( $existing, $tag_ids )
-                );
-            } else {
-                $query_args['tag__in'] = $tag_ids;
-            }
-        }
+			if ( ! empty( $query_args['tag__in'] ) ) {
+				$existing              = (array) $query_args['tag__in'];
+				$query_args['tag__in'] = array_unique(
+					array_merge( $existing, $tag_ids )
+				);
+			} else {
+				$query_args['tag__in'] = $tag_ids;
+			}
+		}
 
-        // Apply extra taxonomy filters via tax_query.
-        if ( ! empty( $extra_tax ) ) {
-            $tax_query = [];
+		// Apply extra taxonomy filters via tax_query.
+		if ( ! empty( $extra_tax ) ) {
+			$tax_query = array();
 
-            if ( ! empty( $query_args['tax_query'] ) && is_array( $query_args['tax_query'] ) ) {
-                $tax_query = $query_args['tax_query'];
-            }
+			if ( ! empty( $query_args['tax_query'] ) && is_array( $query_args['tax_query'] ) ) {
+				$tax_query = $query_args['tax_query'];
+			}
 
-            if ( ! empty( $tax_query ) && empty( $tax_query['relation'] ) ) {
-                $tax_query['relation'] = 'AND';
-            } elseif ( empty( $tax_query ) ) {
-                $tax_query['relation'] = 'AND';
-            }
+			if ( ! empty( $tax_query ) && empty( $tax_query['relation'] ) ) {
+				$tax_query['relation'] = 'AND';
+			} elseif ( empty( $tax_query ) ) {
+				$tax_query['relation'] = 'AND';
+			}
 
-            foreach ( $extra_tax as $taxonomy => $term_ids ) {
-                $tax_query[] = [
-                    'taxonomy' => $taxonomy,
-                    'field'    => 'term_id',
-                    'terms'    => $term_ids,
-                    'operator' => 'IN',
-                ];
-            }
+			foreach ( $extra_tax as $taxonomy => $term_ids ) {
+				$tax_query[] = array(
+					'taxonomy' => $taxonomy,
+					'field'    => 'term_id',
+					'terms'    => $term_ids,
+					'operator' => 'IN',
+				);
+			}
 
-            $query_args['tax_query'] = $tax_query;
-        }
+			$query_args['tax_query'] = $tax_query;
+		}
 
-        // Apply meta filters (Meta Box fields).
-        if ( ! empty( $meta_filters ) ) {
-            $meta_query = [];
+		// Apply meta filters (Meta Box fields).
+		if ( ! empty( $meta_filters ) ) {
+			$meta_query = array();
 
-            if ( ! empty( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] ) ) {
-                $meta_query = $query_args['meta_query'];
-            }
+			if ( ! empty( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] ) ) {
+				$meta_query = $query_args['meta_query'];
+			}
 
-            if ( ! empty( $meta_query ) && empty( $meta_query['relation'] ) ) {
-                $meta_query['relation'] = 'AND';
-            } elseif ( empty( $meta_query ) ) {
-                $meta_query['relation'] = 'AND';
-            }
+			if ( ! empty( $meta_query ) && empty( $meta_query['relation'] ) ) {
+				$meta_query['relation'] = 'AND';
+			} elseif ( empty( $meta_query ) ) {
+				$meta_query['relation'] = 'AND';
+			}
 
-            foreach ( $meta_filters as $filter ) {
-                $meta_query[] = [
-                    'key'   => $filter['key'],
-                    'value' => $filter['value'],
-                ];
-            }
+			foreach ( $meta_filters as $filter ) {
+				$meta_query[] = array(
+					'key'   => $filter['key'],
+					'value' => $filter['value'],
+				);
+			}
 
-            $query_args['meta_query'] = $meta_query;
-        }
+			$query_args['meta_query'] = $meta_query;
+		}
 
-        // Apply ACF filters (if any).
-        if ( ! empty( $acf_filters ) ) {
-            $meta_query = [];
+		// Apply ACF filters (if any).
+		if ( ! empty( $acf_filters ) ) {
+			$meta_query = array();
 
-            if ( ! empty( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] ) ) {
-                $meta_query = $query_args['meta_query'];
-            }
+			if ( ! empty( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] ) ) {
+				$meta_query = $query_args['meta_query'];
+			}
 
-            if ( ! empty( $meta_query ) && empty( $meta_query['relation'] ) ) {
-                $meta_query['relation'] = 'AND';
-            } elseif ( empty( $meta_query ) ) {
-                $meta_query['relation'] = 'AND';
-            }
+			if ( ! empty( $meta_query ) && empty( $meta_query['relation'] ) ) {
+				$meta_query['relation'] = 'AND';
+			} elseif ( empty( $meta_query ) ) {
+				$meta_query['relation'] = 'AND';
+			}
 
-            foreach ( $acf_filters as $filter ) {
-                $meta_clause = [
-                    'key'   => $filter['key'],
-                    'value' => $filter['value'],
-                ];
+			foreach ( $acf_filters as $filter ) {
+				$meta_clause = array(
+					'key'   => $filter['key'],
+					'value' => $filter['value'],
+				);
 
-                // Add compare operator if specified (for LIKE queries).
-                if ( isset( $filter['compare'] ) ) {
-                    $meta_clause['compare'] = $filter['compare'];
-                }
+				// Add compare operator if specified (for LIKE queries).
+				if ( isset( $filter['compare'] ) ) {
+					$meta_clause['compare'] = $filter['compare'];
+				}
 
-                $meta_query[] = $meta_clause;
-            }
+				$meta_query[] = $meta_clause;
+			}
 
-            $query_args['meta_query'] = $meta_query;
-        }
+			$query_args['meta_query'] = $meta_query;
+		}
 
-        $this->debug_log( 'Query args after GBQF (GB 1.x)', $query_args );
+		$this->debug_log( 'Query args after GBQF (GB 1.x)', $query_args );
 
-        return $query_args;
-    }
+		return $query_args;
+	}
 
-    /**
-     * Apply filters to GenerateBlocks 2.0+ Query WP_Query args.
-     *
-     * @param array        $query_args Existing WP_Query args.
-     * @param array        $attributes Block attributes.
-     * @param array|null   $block      Block data (not needed here).
-     * @param int|string   $query_id   GB query id (not needed here).
-     * @return array
-     */
-    public function apply_filters_to_gb_query_v2( $query_args, $attributes, $block, $query_id ) {
-        return $this->apply_filters_to_gb_query( $query_args, $attributes );
-    }
+	/**
+	 * Apply filters to GenerateBlocks 2.0+ Query WP_Query args.
+	 *
+	 * @param array      $query_args Existing WP_Query args.
+	 * @param array      $attributes Block attributes.
+	 * @param array|null $block      Block data (not needed here).
+	 * @param int|string $query_id   GB query id (not needed here).
+	 * @return array
+	 */
+	public function apply_filters_to_gb_query_v2( $query_args, $attributes, $block, $query_id ) {
+		return $this->apply_filters_to_gb_query( $query_args, $attributes );
+	}
 }

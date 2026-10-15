@@ -1,10 +1,19 @@
 <?php
+/**
+ * Admin settings page and option accessors.
+ *
+ * @package GBQF
+ */
+
 namespace GBQF;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Admin settings page and option accessors.
+ */
 class Settings {
 
 	const OPTION_KEY     = 'gbqf_enable_metabox_integration';
@@ -14,8 +23,8 @@ class Settings {
 	 * Register admin hooks. Call once from plugin bootstrap.
 	 */
 	public static function init() {
-		add_action( 'admin_menu', [ __CLASS__, 'add_admin_menu' ] );
-		add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
+		add_action( 'admin_menu', array( __CLASS__, 'add_admin_menu' ) );
+		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 	}
 
 	// ---------------------------------------------------------------------------
@@ -32,7 +41,7 @@ class Settings {
 			__( 'Query Filters', 'gb-query-filter' ),
 			'manage_options',
 			'gb-query-filter',
-			[ __CLASS__, 'render_settings_page' ]
+			array( __CLASS__, 'render_settings_page' )
 		);
 	}
 
@@ -52,38 +61,50 @@ class Settings {
 			'gb-query-filter'
 		);
 
-		register_setting( 'gb-query-filter', 'gbqf_filter_priority', [
-			'sanitize_callback' => [ __CLASS__, 'sanitize_priority' ],
-			'default'           => 20,
-		] );
+		register_setting(
+			'gb-query-filter',
+			'gbqf_filter_priority',
+			array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_priority' ),
+				'default'           => 20,
+			)
+		);
 		add_settings_field(
 			'gbqf_filter_priority',
 			__( 'Hook Priority', 'gb-query-filter' ),
-			[ __CLASS__, 'render_field_priority' ],
+			array( __CLASS__, 'render_field_priority' ),
 			'gb-query-filter',
 			'gbqf_general'
 		);
 
-		register_setting( 'gb-query-filter', 'gbqf_preserve_search', [
-			'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-			'default'           => '0',
-		] );
+		register_setting(
+			'gb-query-filter',
+			'gbqf_preserve_search',
+			array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+				'default'           => '0',
+			)
+		);
 		add_settings_field(
 			'gbqf_preserve_search',
 			__( 'Merge Search Terms', 'gb-query-filter' ),
-			[ __CLASS__, 'render_field_preserve_search' ],
+			array( __CLASS__, 'render_field_preserve_search' ),
 			'gb-query-filter',
 			'gbqf_general'
 		);
 
-		register_setting( 'gb-query-filter', 'gbqf_enable_debug_logging', [
-			'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-			'default'           => '0',
-		] );
+		register_setting(
+			'gb-query-filter',
+			'gbqf_enable_debug_logging',
+			array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+				'default'           => '0',
+			)
+		);
 		add_settings_field(
 			'gbqf_enable_debug_logging',
 			__( 'Debug Logging', 'gb-query-filter' ),
-			[ __CLASS__, 'render_field_debug_logging' ],
+			array( __CLASS__, 'render_field_debug_logging' ),
 			'gb-query-filter',
 			'gbqf_general'
 		);
@@ -96,34 +117,42 @@ class Settings {
 			add_settings_section(
 				'gbqf_integrations',
 				__( 'Integrations', 'gb-query-filter' ),
-				[ __CLASS__, 'render_integrations_intro' ],
+				array( __CLASS__, 'render_integrations_intro' ),
 				'gb-query-filter'
 			);
 		}
 
 		if ( $metabox_active ) {
-			register_setting( 'gb-query-filter', self::OPTION_KEY, [
-				'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-				'default'           => '1',
-			] );
+			register_setting(
+				'gb-query-filter',
+				self::OPTION_KEY,
+				array(
+					'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+					'default'           => '1',
+				)
+			);
 			add_settings_field(
 				self::OPTION_KEY,
 				__( 'Meta Box Integration', 'gb-query-filter' ),
-				[ __CLASS__, 'render_field_metabox' ],
+				array( __CLASS__, 'render_field_metabox' ),
 				'gb-query-filter',
 				'gbqf_integrations'
 			);
 		}
 
 		if ( $acf_active ) {
-			register_setting( 'gb-query-filter', self::OPTION_KEY_ACF, [
-				'sanitize_callback' => [ __CLASS__, 'sanitize_bool' ],
-				'default'           => '1',
-			] );
+			register_setting(
+				'gb-query-filter',
+				self::OPTION_KEY_ACF,
+				array(
+					'sanitize_callback' => array( __CLASS__, 'sanitize_bool' ),
+					'default'           => '1',
+				)
+			);
 			add_settings_field(
 				self::OPTION_KEY_ACF,
 				__( 'ACF Integration', 'gb-query-filter' ),
-				[ __CLASS__, 'render_field_acf' ],
+				array( __CLASS__, 'render_field_acf' ),
 				'gb-query-filter',
 				'gbqf_integrations'
 			);
@@ -134,16 +163,21 @@ class Settings {
 	// Field renderers
 	// ---------------------------------------------------------------------------
 
+	/**
+	 * Render the hook priority field.
+	 */
 	public static function render_field_priority() {
-		$value = absint( get_option( 'gbqf_filter_priority', 20 ) );
 		printf(
 			'<input type="number" id="gbqf_filter_priority" name="gbqf_filter_priority" value="%d" min="1" class="small-text" />
 			<p class="description">%s</p>',
-			$value,
+			absint( get_option( 'gbqf_filter_priority', 20 ) ),
 			esc_html__( 'Controls when GBQF runs relative to other plugins that modify Query Loop queries. Higher numbers run later. Default: 20.', 'gb-query-filter' )
 		);
 	}
 
+	/**
+	 * Render the preserve-search field.
+	 */
 	public static function render_field_preserve_search() {
 		$checked = (bool) get_option( 'gbqf_preserve_search', false );
 		printf(
@@ -155,6 +189,9 @@ class Settings {
 		);
 	}
 
+	/**
+	 * Render the debug logging field.
+	 */
 	public static function render_field_debug_logging() {
 		$checked = (bool) get_option( 'gbqf_enable_debug_logging', false );
 		printf(
@@ -166,10 +203,16 @@ class Settings {
 		);
 	}
 
+	/**
+	 * Render the integrations section intro.
+	 */
 	public static function render_integrations_intro() {
 		echo '<p>' . esc_html__( 'Enable or disable GBQF integration with third-party field plugins.', 'gb-query-filter' ) . '</p>';
 	}
 
+	/**
+	 * Render the Meta Box integration field.
+	 */
 	public static function render_field_metabox() {
 		$checked = self::is_metabox_enabled();
 		printf(
@@ -181,6 +224,9 @@ class Settings {
 		);
 	}
 
+	/**
+	 * Render the ACF integration field.
+	 */
 	public static function render_field_acf() {
 		$checked = self::is_acf_enabled();
 		printf(
@@ -196,6 +242,9 @@ class Settings {
 	// Settings page renderer
 	// ---------------------------------------------------------------------------
 
+	/**
+	 * Render the settings page.
+	 */
 	public static function render_settings_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -221,7 +270,7 @@ class Settings {
 	/**
 	 * Sanitize a hook priority: positive integer, minimum 1.
 	 *
-	 * @param mixed $value
+	 * @param mixed $value Raw submitted value.
 	 * @return int
 	 */
 	public static function sanitize_priority( $value ) {
@@ -232,7 +281,7 @@ class Settings {
 	/**
 	 * Sanitize a boolean option stored as '1' / '0'.
 	 *
-	 * @param mixed $value
+	 * @param mixed $value Raw submitted value.
 	 * @return string '1' or '0'
 	 */
 	public static function sanitize_bool( $value ) {

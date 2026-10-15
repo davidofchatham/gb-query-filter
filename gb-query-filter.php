@@ -9,10 +9,12 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       gb-query-filter
  * Domain Path:       /languages
+ *
+ * @package GBQF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly.
+	exit; // Exit if accessed directly.
 }
 
 define( 'GBQF_VERSION', '0.4.0' );
@@ -29,7 +31,7 @@ require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-plugin.php';
  * @return \GBQF\Plugin
  */
 function gbqf() {
-    return \GBQF\Plugin::instance();
+	return \GBQF\Plugin::instance();
 }
 
 // Boot the plugin.
