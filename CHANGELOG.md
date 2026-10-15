@@ -11,6 +11,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - PHP now follows the WordPress coding standards (tabs, long arrays, docblocks) and is enforced by `composer lint` (phpcs) in a blocking GitHub Actions check. No behavior change.
+- Meta Box and ACF field labels are now built from the control that was actually rendered: only a branch that emits the single control id sets the label's `for`, so the label no longer re-derives which control types carry one. A new control type defaults to a labelled group, so it cannot produce a dangling `for` by omission. No markup change.
 
 ### Removed
 - `Filters::register_target()`, deprecated in 0.4.0. Call `Targeting::register()` instead; `Filters` no longer has any part in target registration.
