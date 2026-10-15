@@ -9,6 +9,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **Changing a filter from a later page rendered an empty loop.** The AJAX request kept the Query's pagination param (`query-{uniqueId}-page`), so narrowing results from page 3 to a set that fits on one page asked WordPress for a page that no longer exists. A filter change now removes the target Query's page key, and Reset clears it too. Other Queries' pagination on the same page is left alone.
 
+### Changed
+- PHP now follows the WordPress coding standards (tabs, long arrays, docblocks) and is enforced by `composer lint` (phpcs) in a blocking GitHub Actions check. No behavior change.
+
 ### Removed
 - `Filters::register_target()`, deprecated in 0.4.0. Call `Targeting::register()` instead; `Filters` no longer has any part in target registration.
 

@@ -70,7 +70,7 @@ Full param/data-attribute reference: [docs/developer-filters.md](docs/developer-
 
 ## Conventions
 
-- `GBQF\` namespace; WordPress coding standards.
+- `GBQF\` namespace; WordPress coding standards, tabs in all PHP. `composer install && composer lint` runs phpcs ([phpcs.xml](phpcs.xml), `WordPress-Extra` + `WordPress-Docs`); CI blocks on it. Declined rules are listed in `phpcs.xml`, each with its reason. JS and CSS are not linted.
 - No build step — edit PHP/JS/CSS directly.
 - Version constant in [gb-query-filter.php](gb-query-filter.php) (`GBQF_VERSION`). Semantic versioning. Keep [CHANGELOG.md](CHANGELOG.md) current (Keep a Changelog format).
 - `gbqf_loaded` action fires once the plugin is initialized.
