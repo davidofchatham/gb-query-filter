@@ -61,7 +61,14 @@ return array(
 	 * `scope_id()` and the field lists come off the matched target key; v2
 	 * proved the scope travels, and this proves the FIELDS travel with it.
 	 */
-	'version'       => 4,
+
+	/*
+	 * v5 adds TAXONOMY FIELD labeling, on its own page (`taxonomy`, below). The
+	 * category, tag and extra-taxonomy controls were never rendered by any
+	 * fixture, so how they are NAMED — a checkbox set needs a group name, a select
+	 * needs a `<label for>` — was unmeasured.
+	 */
+	'version'       => 5,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
@@ -309,6 +316,48 @@ return array(
 			// single parameter name, so §8's row count is unaffected.
 			'acf_control' => 'radio',
 		),
+	),
+
+	/*
+	 * v5. The taxonomy page: filter blocks only, no loop.
+	 *
+	 * Labeling is a property of the rendered FORM, so nothing here needs a loop
+	 * to filter. A page of its own is what lets the controls render at all: they
+	 * emit a checkbox per term on the site, which would be noise in the targeting
+	 * page's body, where the harness counts strings.
+	 *
+	 * Two blocks, one per control shape — a checkbox SET is a group of inputs
+	 * named by `role="group"`, a SELECT is one input named by `<label for>`, and
+	 * the two are different code paths with different ways to be wrong. Both
+	 * blocks on one page is also what makes the id-uniqueness check meaningful.
+	 *
+	 * `tags` are seeded onto the four fixture posts (the tag control renders only
+	 * terms that have a post). `category` already does, via the fixture category.
+	 *
+	 * `extra` is NOT ours: `department` is registered and seeded by the
+	 * core-structures blueprint (bws-gb-dynamic-tags-extensions), which this
+	 * blueprint otherwise composes on nothing of. It is borrowed for the TAXONOMY
+	 * ONLY, so the extra-taxonomy branch renders — verify.php fails by name if it
+	 * is absent. Nothing here may assign it a term: core-structures' own term
+	 * counts are a baseline of theirs, and site-views hides posts that carry one.
+	 */
+	'taxonomy'      => array(
+		'page'   => array(
+			'slug'  => 'gbqf-taxonomy',
+			'title' => 'GBQF taxonomy labels',
+		),
+		'tags'   => array(
+			'gbqf-tag-one' => array(
+				'name'  => 'GBQF Tag One',
+				'posts' => array( 'gbqf-alpha', 'gbqf-bravo' ),
+			),
+			'gbqf-tag-two' => array(
+				'name'  => 'GBQF Tag Two',
+				'posts' => array( 'gbqf-charlie', 'gbqf-delta' ),
+			),
+		),
+		'extra'  => 'department',
+		'blocks' => array( 'checkboxes', 'select' ),
 	),
 
 	/*

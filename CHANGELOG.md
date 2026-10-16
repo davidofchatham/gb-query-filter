@@ -8,8 +8,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - **Changing a filter from a later page rendered an empty loop.** The AJAX request kept the Query's pagination param (`query-{uniqueId}-page`), so narrowing results from page 3 to a set that fits on one page asked WordPress for a page that no longer exists. A filter change now removes the target Query's page key, and Reset clears it too. Other Queries' pagination on the same page is left alone.
+- **Taxonomy checkbox sets (Categories, Tags, extra taxonomies) had no group name.** Each option was announced ("GBQF Fixture, checkbox") without the set's name ("Categories"). The set is now a `role="group"` named by its visible label, the same as the Meta Box and ACF checkbox and radio groups (WCAG 1.3.1, 4.1.2).
 
 ### Changed
+- Taxonomy selects are now named by a real `<label for>` whose visible text is the name, instead of an `aria-label` beside a bare `<span>`, so clicking the label focuses the control.
+- Field labels (taxonomy, Meta Box, ACF) are now all `<label class="gbqf-filter-label">`. Meta Box and ACF labels pick up that class's styling (semibold, 13px), so they match the taxonomy labels; override `.gbqf-filter-label` if your theme styled them differently.
 - PHP now follows the WordPress coding standards (tabs, long arrays, docblocks) and is enforced by `composer lint` (phpcs) in a blocking GitHub Actions check. No behavior change.
 - Meta Box and ACF field labels are now built from the control that was actually rendered: only a branch that emits the single control id sets the label's `for`, so the label no longer re-derives which control types carry one. A new control type defaults to a labelled group, so it cannot produce a dangling `for` by omission. No markup change.
 

@@ -784,109 +784,41 @@ class Blocks {
 
 		// Categories field.
 		if ( $enable_categories && ! empty( $categories ) ) {
-			$html .= '<div class="gbqf-filter-field gbqf-filter-categories">';
-			$html .= '<span class="gbqf-filter-label">' . esc_html__( 'Categories', 'gb-query-filter' ) . '</span>';
-
-			if ( 'select' === $cats_control_type ) {
-				$html .= '<select name="' . esc_attr( $name_cat ) . '" aria-label="' . esc_attr__( 'Categories', 'gb-query-filter' ) . '">';
-				$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
-				foreach ( $categories as $cat ) {
-					$cat_id   = (int) $cat->term_id;
-					$selected = in_array( $cat_id, $selected_cats, true ) ? 'selected' : '';
-					$html    .= '<option value="' . esc_attr( $cat_id ) . '" ' . $selected . '>' . esc_html( $cat->name ) . '</option>';
-				}
-				$html .= '</select>';
-			} else {
-				$html .= '<div class="gbqf-filter-options">';
-				foreach ( $categories as $cat ) {
-					$cat_id   = (int) $cat->term_id;
-					$checked  = in_array( $cat_id, $selected_cats, true );
-					$field_id = $cid . 'cat_' . $cat_id;
-
-					$html .= '<label for="' . esc_attr( $field_id ) . '" class="gbqf-filter-option">';
-					$html .= '<input type="checkbox" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $name_cat ) . '" value="' . esc_attr( $cat_id ) . '" ' . checked( $checked, true, false ) . ' />';
-					$html .= '<span>' . esc_html( $cat->name ) . '</span>';
-					$html .= '</label>';
-				}
-				$html .= '</div>';
-			}
-
-			$html .= '</div>';
+			$html .= $this->taxonomy_field(
+				'gbqf-filter-categories',
+				__( 'Categories', 'gb-query-filter' ),
+				$cid . 'cat',
+				$categories,
+				$cats_control_type,
+				$name_cat,
+				$selected_cats
+			);
 		}
 
 		// Tags field.
 		if ( $enable_tags && ! empty( $tags ) ) {
-			$html .= '<div class="gbqf-filter-field gbqf-filter-tags">';
-			$html .= '<span class="gbqf-filter-label">' . esc_html__( 'Tags', 'gb-query-filter' ) . '</span>';
-
-			if ( 'select' === $tags_control_type ) {
-				$html .= '<select name="' . esc_attr( $name_tag ) . '" aria-label="' . esc_attr__( 'Tags', 'gb-query-filter' ) . '">';
-				$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
-				foreach ( $tags as $tag ) {
-					$tag_id   = (int) $tag->term_id;
-					$selected = in_array( $tag_id, $selected_tags, true ) ? 'selected' : '';
-					$html    .= '<option value="' . esc_attr( $tag_id ) . '" ' . $selected . '>' . esc_html( $tag->name ) . '</option>';
-				}
-				$html .= '</select>';
-			} else {
-				$html .= '<div class="gbqf-filter-options">';
-				foreach ( $tags as $tag ) {
-					$tag_id   = (int) $tag->term_id;
-					$checked  = in_array( $tag_id, $selected_tags, true );
-					$field_id = $cid . 'tag_' . $tag_id;
-
-					$html .= '<label for="' . esc_attr( $field_id ) . '" class="gbqf-filter-option">';
-					$html .= '<input type="checkbox" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $name_tag ) . '" value="' . esc_attr( $tag_id ) . '" ' . checked( $checked, true, false ) . ' />';
-					$html .= '<span>' . esc_html( $tag->name ) . '</span>';
-					$html .= '</label>';
-				}
-				$html .= '</div>';
-			}
-
-			$html .= '</div>';
+			$html .= $this->taxonomy_field(
+				'gbqf-filter-tags',
+				__( 'Tags', 'gb-query-filter' ),
+				$cid . 'tag',
+				$tags,
+				$tags_control_type,
+				$name_tag,
+				$selected_tags
+			);
 		}
 
 		// Extra taxonomies.
-		if ( ! empty( $extra_taxonomies_data ) ) {
-			foreach ( $extra_taxonomies_data as $slug => $data ) {
-				$tax_obj = $data['object'];
-				$terms   = $data['terms'];
-
-				$label = $tax_obj->labels->name ?? $slug;
-
-				$html .= '<div class="gbqf-filter-field gbqf-filter-tax gbqf-filter-tax-' . esc_attr( $slug ) . '">';
-				$html .= '<span class="gbqf-filter-label">' . esc_html( $label ) . '</span>';
-
-				$selected_for_tax = isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : array();
-
-				if ( 'select' === $extra_control_type ) {
-					$html .= '<select name="' . esc_attr( sprintf( $name_tax_fmt, $slug ) ) . '" aria-label="' . esc_attr( $label ) . '">';
-					$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
-					foreach ( $terms as $term ) {
-						$term_id  = (int) $term->term_id;
-						$selected = in_array( $term_id, $selected_for_tax, true ) ? 'selected' : '';
-						$html    .= '<option value="' . esc_attr( $term_id ) . '" ' . $selected . '>' . esc_html( $term->name ) . '</option>';
-					}
-					$html .= '</select>';
-				} else {
-					$html .= '<div class="gbqf-filter-options">';
-
-					foreach ( $terms as $term ) {
-						$term_id  = (int) $term->term_id;
-						$checked  = in_array( $term_id, $selected_for_tax, true );
-						$field_id = $cid . 'tax_' . $slug . '_' . $term_id;
-
-						$html .= '<label for="' . esc_attr( $field_id ) . '" class="gbqf-filter-option">';
-						$html .= '<input type="checkbox" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( sprintf( $name_tax_fmt, $slug ) ) . '" value="' . esc_attr( $term_id ) . '" ' . checked( $checked, true, false ) . ' />';
-						$html .= '<span>' . esc_html( $term->name ) . '</span>';
-						$html .= '</label>';
-					}
-
-					$html .= '</div>';
-				}
-
-				$html .= '</div>';
-			}
+		foreach ( $extra_taxonomies_data as $slug => $data ) {
+			$html .= $this->taxonomy_field(
+				'gbqf-filter-tax gbqf-filter-tax-' . $slug,
+				$data['object']->labels->name ?? $slug,
+				$cid . 'tax_' . $slug,
+				$data['terms'],
+				$extra_control_type,
+				sprintf( $name_tax_fmt, $slug ),
+				isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : array()
+			);
 		}
 
 		// Meta Box fields: one UI group per field.
@@ -1104,7 +1036,56 @@ class Blocks {
 			? 'for="' . esc_attr( $label_for ) . '"'
 			: 'id="' . esc_attr( $control_id . '_label' ) . '"';
 
-		return '<label ' . $attr . '>' . esc_html( $label ) . '</label>';
+		return '<label ' . $attr . ' class="gbqf-filter-label">' . esc_html( $label ) . '</label>';
+	}
+
+	/**
+	 * Render one taxonomy field: a select, or a set of checkboxes.
+	 *
+	 * A select is one control, so its label points at it with `for`. A checkbox set
+	 * is a group of inputs with no single control to point at, so the label gets an
+	 * `id` and the wrapper is a `role="group"` named by it (ADR-0003). `$control_id`
+	 * is the select's id and the stem of every checkbox id and of the label id.
+	 *
+	 * @param string $field_class   Classes after `gbqf-filter-field` on the wrapper.
+	 * @param string $label         Visible label text.
+	 * @param string $control_id    Block-scoped control id, unique per block.
+	 * @param array  $terms         WP_Term objects.
+	 * @param string $control_type  'select' or 'checkboxes'.
+	 * @param string $name          Input name.
+	 * @param int[]  $selected_ids  Selected term ids.
+	 * @return string Field markup.
+	 */
+	protected function taxonomy_field( $field_class, $label, $control_id, $terms, $control_type, $name, $selected_ids ) {
+		$is_select = 'select' === $control_type;
+
+		$html  = '<div class="' . esc_attr( 'gbqf-filter-field ' . $field_class ) . '">';
+		$html .= $this->field_label( $label, $control_id, $is_select ? $control_id : '' );
+
+		if ( $is_select ) {
+			$html .= '<select id="' . esc_attr( $control_id ) . '" name="' . esc_attr( $name ) . '">';
+			$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
+			foreach ( $terms as $term ) {
+				$term_id  = (int) $term->term_id;
+				$selected = in_array( $term_id, $selected_ids, true ) ? 'selected' : '';
+				$html    .= '<option value="' . esc_attr( $term_id ) . '" ' . $selected . '>' . esc_html( $term->name ) . '</option>';
+			}
+			$html .= '</select>';
+		} else {
+			$html .= '<div class="gbqf-filter-options" role="group" aria-labelledby="' . esc_attr( $control_id . '_label' ) . '">';
+			foreach ( $terms as $term ) {
+				$term_id  = (int) $term->term_id;
+				$field_id = $control_id . '_' . $term_id;
+
+				$html .= '<label for="' . esc_attr( $field_id ) . '" class="gbqf-filter-option">';
+				$html .= '<input type="checkbox" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $term_id ) . '" ' . checked( in_array( $term_id, $selected_ids, true ), true, false ) . ' />';
+				$html .= '<span>' . esc_html( $term->name ) . '</span>';
+				$html .= '</label>';
+			}
+			$html .= '</div>';
+		}
+
+		return $html . '</div>';
 	}
 
 	/**

@@ -421,17 +421,21 @@ fi
 #
 # Checks both reference kinds, since the two label mechanisms above use one
 # each: `for` for single controls, `aria-labelledby` for groups.
-refs=$(printf '%s' "${BASE}" \
-    | grep -o -E '(for|aria-labelledby)="gbqf[0-9]+_[^"]*"' \
-    | sed -E 's/^[^"]*"//; s/"$//' | sort -u || true)
+check_refs(){
+    local body="${1}" where="${2}" refs dangling duplicated ref n ref_count
+    refs=$(printf '%s' "${body}" \
+        | grep -o -E '(for|aria-labelledby)="gbqf[0-9]+_[^"]*"' \
+        | sed -E 's/^[^"]*"//; s/"$//' | sort -u || true)
 
-if [ -z "${refs}" ]; then
-    bad 'no gbqf control id references found at all — the form did not render as expected'
-else
+    if [ -z "${refs}" ]; then
+        bad "${where}: no gbqf control id references found at all — the form did not render as expected"
+        return
+    fi
+
     dangling=0
     duplicated=0
     for ref in ${refs}; do
-        n=$(printf '%s' "${BASE}" | grep -o "id=\"${ref}\"" | wc -l | tr -d ' ' || true)
+        n=$(printf '%s' "${body}" | grep -o "id=\"${ref}\"" | wc -l | tr -d ' ' || true)
         if [ "${n}" = "0" ]; then
             dangling=$((dangling+1))
             note "dangling: nothing carries id=\"${ref}\""
@@ -444,13 +448,89 @@ else
     ref_count=$(printf '%s\n' "${refs}" | wc -l | tr -d ' ')
 
     [ "${dangling}" = "0" ] \
-        && ok "every label reference resolves to a real control (${ref_count} checked)" \
-        || bad "${dangling} label reference(s) point at no element"
+        && ok "${where}: every label reference resolves to a real control (${ref_count} checked)" \
+        || bad "${where}: ${dangling} label reference(s) point at no element"
 
     [ "${duplicated}" = "0" ] \
-        && ok "every referenced control id is unique on the page (${ref_count} checked)" \
-        || bad "${duplicated} control id(s) appear more than once — labels resolve ambiguously"
-fi
+        && ok "${where}: every referenced control id is unique on the page (${ref_count} checked)" \
+        || bad "${where}: ${duplicated} control id(s) appear more than once — labels resolve ambiguously"
+}
+
+check_refs "${BASE}" 'targeting page'
+
+# v5. Taxonomy fields, on their own page (blueprint v5): two filter blocks, one
+# rendering every taxonomy control as a checkbox SET, the other as a SELECT.
+#
+# A checkbox set is a group of inputs, so its name has to come from
+# role="group" + aria-labelledby; a select is one input, so its name comes from
+# <label for>. These controls used to carry a bare <span> (sets) or an
+# aria-label beside the span (selects), and the baseline audit found a screen
+# reader announcing "GBQF Fixture, checkbox" with no "Categories". axe did not
+# flag it — its checks do not know a heading-looking span is meant as a name.
+#
+# Three taxonomies per shape: category, post_tag and the extra one. All are
+# rendered by one method now, but the id stem (cat / tag / tax_<slug>) is what
+# each caller passes, so each is asserted by its own stem.
+TAX_PAGE='gbqf-taxonomy'
+TX=$(fetch '' "${TAX_PAGE}" || true)
+[ -n "${TX}" ] || err "empty response for /${TAX_PAGE}/ — reseed the blueprint (v5+)."
+
+echo "   taxonomy fields (page: /${TAX_PAGE}/)"
+
+# count_re <body> <ERE>  — how many times the pattern occurs.
+count_re(){
+    printf '%s' "${1}" | grep -o -E "${2}" | wc -l | tr -d ' ' || true
+}
+
+# Branch reachable first: a stem that never rendered would make the checks
+# below vacuous, and that is how an unseeded `department` would read.
+for stem in cat tag tax_department; do
+    n=$(count_re "${TX}" "gbqf[0-9]+_${stem}_[0-9]+\"")
+    if [ "${n}" -gt 0 ]; then
+        ok "taxonomy '${stem}' checkboxes rendered (${n})"
+    else
+        bad "taxonomy '${stem}' rendered no checkboxes — the branch is unreached (is core-structures seeded for department?)"
+    fi
+
+    n=$(count_re "${TX}" "role=\"group\" aria-labelledby=\"gbqf[0-9]+_${stem}_label\"")
+    [ "${n}" = "1" ] \
+        && ok "taxonomy '${stem}' checkbox set is a named group (role=group + aria-labelledby)" \
+        || bad "taxonomy '${stem}' checkbox set: expected exactly 1 role=group + aria-labelledby, got ${n}"
+
+    n=$(count_re "${TX}" "<label id=\"gbqf[0-9]+_${stem}_label\"")
+    [ "${n}" = "1" ] \
+        && ok "taxonomy '${stem}' group has its label element" \
+        || bad "taxonomy '${stem}' group label: expected exactly 1 <label id=...>, got ${n}"
+
+    n=$(count_re "${TX}" "<label for=\"gbqf[0-9]+_${stem}\"")
+    [ "${n}" = "1" ] \
+        && ok "taxonomy '${stem}' select has an associated label" \
+        || bad "taxonomy '${stem}' select: expected exactly 1 <label for>, got ${n}"
+
+    n=$(count_re "${TX}" "<select id=\"gbqf[0-9]+_${stem}\"")
+    [ "${n}" = "1" ] \
+        && ok "taxonomy '${stem}' select carries the id its label points at" \
+        || bad "taxonomy '${stem}' select: expected exactly 1 <select id=...>, got ${n}"
+done
+
+# The visible text IS the name now; a second name beside it is the old shape.
+# Scoped to <select>: the theme chrome on this page carries aria-labels of its own.
+n=$(count_re "${TX}" '<select[^>]* aria-label=')
+[ "${n}" = "0" ] \
+    && ok 'no taxonomy control is named by aria-label (the visible label is the name)' \
+    || bad "${n} aria-label attribute(s) on the taxonomy page — a control still named beside its visible text"
+
+n=$(count_re "${TX}" '<span class="gbqf-filter-label"')
+[ "${n}" = "0" ] \
+    && ok 'no taxonomy heading is a bare <span class="gbqf-filter-label">' \
+    || bad "${n} bare <span class=\"gbqf-filter-label\"> heading(s) — named by nothing"
+
+n=$(count_re "${TX}" '<label>')
+[ "${n}" = "0" ] \
+    && ok 'no bare <label> tags on the taxonomy page' \
+    || bad "${n} bare <label> tag(s) on the taxonomy page"
+
+check_refs "${TX}" 'taxonomy page'
 
 # ---------------------------------------------------------------------------
 # 7. Meta Box field filter through an ID-matched target. (blueprint v3)

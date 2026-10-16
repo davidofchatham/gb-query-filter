@@ -10,10 +10,12 @@
  * or, plugin-blind:
  *   bin/seed.sh <site> query-filters
  *
- * Composes on nothing. This blueprint defines its own category and posts rather
- * than borrowing core-structures' content, because its assertions count rows in
- * a result set — a shared post pool would make every count depend on what a
- * sibling blueprint last seeded.
+ * Composes on core-structures for ONE thing: the `department` taxonomy, rendered
+ * by the v5 taxonomy page. This blueprint still defines its own category and
+ * posts rather than borrowing core-structures' content, because its assertions
+ * count rows in a result set — a shared post pool would make every count depend
+ * on what a sibling blueprint last seeded. No version pin: it relies on the
+ * taxonomy having terms, which is checked below, not on a manifest number.
  *
  * No schema.php and no mu-plugin stub: the only registrations involved are
  * WordPress core's `post` type and `category` taxonomy, which survive a
@@ -100,6 +102,25 @@ if ( ! \GBQF\Settings::is_metabox_enabled() ) {
 
 if ( ! \GBQF\Settings::is_acf_enabled() ) {
 	WP_CLI::error( 'GBQF ACF integration is disabled (GenerateBlocks -> Query Filters). ACF field filters would no-op.' );
+}
+
+// v5. The extra-taxonomy control renders only a taxonomy that exists AND has a
+// term with a post. `department` is core-structures' (registered by its mu-plugin
+// stub, terms seeded on its posts); without it the branch emits nothing, and the
+// taxonomy page's labeling checks would pass over a control that never rendered.
+$extra_tax = $manifest['taxonomy']['extra'];
+if ( ! taxonomy_exists( $extra_tax ) ) {
+	WP_CLI::error( "Taxonomy '{$extra_tax}' is not registered. Seed core-structures first (bin/seed.sh <site> core-structures); the v5 taxonomy page borrows it." );
+}
+$extra_terms = get_terms(
+	array(
+		'taxonomy'   => $extra_tax,
+		'hide_empty' => true,
+		'fields'     => 'ids',
+	)
+);
+if ( is_wp_error( $extra_terms ) || empty( $extra_terms ) ) {
+	WP_CLI::error( "Taxonomy '{$extra_tax}' has no term with a post. Seed core-structures first; with none, the extra-taxonomy control renders nothing and the v5 checks would be vacuous." );
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +225,33 @@ foreach ( $manifest['posts'] as $spec ) {
 	}
 
 	$log( "post {$spec['slug']} -> #{$post_id} (" . http_build_query( $spec['meta'], '', ', ' ) . ')' );
+}
+
+// ---------------------------------------------------------------------------
+// 2b. v5 tags, for the taxonomy page. The tag control renders only terms that
+// have a post, so each tag goes on fixture posts. Appended: re-adding a term a
+// post already has changes nothing, so re-running does not accumulate.
+// ---------------------------------------------------------------------------
+foreach ( $manifest['taxonomy']['tags'] as $tag_slug => $tag ) {
+	$tag_term = get_term_by( 'slug', $tag_slug, 'post_tag' );
+	if ( ! $tag_term ) {
+		$created = wp_insert_term( $tag['name'], 'post_tag', array( 'slug' => $tag_slug ) );
+		if ( is_wp_error( $created ) ) {
+			WP_CLI::error( "tag {$tag_slug} insert failed: " . $created->get_error_message() );
+		}
+		$tag_id = (int) $created['term_id'];
+	} else {
+		$tag_id = (int) $tag_term->term_id;
+	}
+
+	foreach ( $tag['posts'] as $post_slug ) {
+		$post = get_page_by_path( $post_slug, OBJECT, 'post' );
+		if ( ! $post ) {
+			WP_CLI::error( "tag {$tag_slug}: post {$post_slug} not found" );
+		}
+		wp_set_post_terms( $post->ID, array( $tag_id ), 'post_tag', true );
+	}
+	$log( "tag {$tag_slug} (#{$tag_id}) -> " . implode( ', ', $tag['posts'] ) );
 }
 
 // ---------------------------------------------------------------------------
@@ -439,4 +487,27 @@ $upsert_page(
 
 ' . $paging_markup
 );
+
+// ---------------------------------------------------------------------------
+// v5. The taxonomy page: one filter block per control shape, no loop.
+// ---------------------------------------------------------------------------
+$tax_blocks = array();
+foreach ( $manifest['taxonomy']['blocks'] as $control ) {
+	$tax_blocks[] = '<!-- wp:gbqf/query-filter ' . wp_json_encode(
+		array(
+			'targetId'                   => '',
+			'enableSearch'               => true,
+			'enableCategories'           => true,
+			'enableTags'                 => true,
+			'enableExtraTaxonomies'      => true,
+			'extraTaxonomies'            => $manifest['taxonomy']['extra'],
+			'categoriesControlType'      => $control,
+			'tagsControlType'            => $control,
+			'extraTaxonomiesControlType' => $control,
+			'enableAjax'                 => false,
+		)
+	) . ' /-->';
+}
+$upsert_page( $manifest['taxonomy']['page'], implode( "\n\n", $tax_blocks ) );
+
 WP_CLI::success( '[query-filters] seeded (manifest v' . $manifest['version'] . ')' );

@@ -263,6 +263,57 @@ if ( $page_ids ) {
 		: $bad( "ownership is not disjoint ({$mb_owner_count} MB owners, {$acf_owner_count} ACF owners) — section 9 cannot distinguish owned from unowned" );
 }
 
+// --- v5: taxonomy page ------------------------------------------------------
+//
+// The labeling checks in render-surface.sh read this page's body. Each control
+// renders only a taxonomy with a term that has a post, so a missing tag or an
+// absent `department` leaves a branch unrendered and its checks vacuous.
+$tx = $manifest['taxonomy'];
+
+foreach ( $tx['tags'] as $tag_slug => $tag ) {
+	$tag_term = get_term_by( 'slug', $tag_slug, 'post_tag' );
+	$tag_term && (int) $tag_term->count >= count( $tag['posts'] )
+		? $ok( "tag {$tag_slug} exists on its posts" )
+		: $bad( "tag {$tag_slug} missing or not on its posts — the tag control would not render" );
+}
+
+$extra_terms = taxonomy_exists( $tx['extra'] )
+	? get_terms(
+		array(
+			'taxonomy'   => $tx['extra'],
+			'hide_empty' => true,
+			'fields'     => 'ids',
+		)
+	)
+	: array();
+! empty( $extra_terms ) && ! is_wp_error( $extra_terms )
+	? $ok( "taxonomy {$tx['extra']} registered with terms (borrowed from core-structures)" )
+	: $bad( "taxonomy {$tx['extra']} absent or empty — seed core-structures; the extra-taxonomy control would not render" );
+
+$tx_pages = get_posts(
+	array(
+		'post_type'      => 'page',
+		'name'           => $tx['page']['slug'],
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+	)
+);
+if ( ! $tx_pages ) {
+	$bad( "page {$tx['page']['slug']} missing or unpublished" );
+} else {
+	$expected_blocks = count( $tx['blocks'] );
+	$block_count     = substr_count( $tx_pages[0]->post_content, 'wp:gbqf/query-filter' );
+	$expected_blocks === $block_count
+		? $ok( "page {$tx['page']['slug']} carries {$expected_blocks} filter blocks" )
+		: $bad( "page {$tx['page']['slug']} carries {$block_count} filter blocks, expected {$expected_blocks}" );
+
+	foreach ( $tx['blocks'] as $control ) {
+		false !== strpos( $tx_pages[0]->post_content, '"categoriesControlType":"' . $control . '"' )
+			? $ok( "page {$tx['page']['slug']} has a '{$control}' block" )
+			: $bad( "page {$tx['page']['slug']} has no '{$control}' block — that control shape is unmeasured" );
+	}
+}
+
 // --- environment ------------------------------------------------------------
 class_exists( '\GBQF\Filters' )
 	? $ok( 'gb-query-filter loaded' )

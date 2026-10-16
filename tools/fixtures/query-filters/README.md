@@ -14,7 +14,7 @@ So the split is deliberate:
 | file | asserts |
 |---|---|
 | `schema.php` | registers the Meta Box and ACF fields (loaded on every request via a mu-plugin stub, because GBQF reads both registries at *render* time) |
-| `verify.php` | the fixtures are real (posts, meta values, page, five loops, three filter blocks, both fields registered, ownership disjoint) |
+| `verify.php` | the fixtures are real (posts, meta values, page, five loops, three filter blocks, both fields registered, ownership disjoint, the v5 taxonomy page) |
 | `render-surface.sh` | the targeting and ownership rules, against real HTTP responses |
 
 ## The fixture
@@ -47,9 +47,15 @@ Each loop emits `<MARKER>::<post title>` per row, so a rendered row count is a s
 
 Ownership is **disjoint**: the `scoped` block owns only the Meta Box field, the `classmatch` block owns only the ACF field. Each §9 request therefore asks a block to filter on precisely the field the *other* block owns.
 
+### Taxonomy labeling page (v5)
+
+A second page, `/gbqf-taxonomy/`, carries two filter blocks and no loop: one renders Categories, Tags and the extra taxonomy as checkbox **sets**, the other as **selects**. §6 reads it for the two ways a taxonomy control gets its name (a `role="group"` named by its label, a `<label for>` on the select) and for the id-uniqueness check across both blocks. It has its own page because those controls emit a checkbox per term on the site, which would be noise in the targeting page's body.
+
+The tags are seeded onto the four fixture posts. The extra taxonomy is `department`, **borrowed from the core-structures blueprint** (`bws-gb-dynamic-tags-extensions`) for the taxonomy only: seed core-structures first, and never assign `department` a term here — its own term counts are a baseline of theirs, and site-views hides posts that carry one. `seed.php` and `verify.php` fail by name if it is absent, and §6 fails if a branch rendered nothing, rather than passing over a control that never appeared. There is no manifest-version pin: the dependency is "the taxonomy exists and has terms".
+
 ## Current result
 
-**52 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v4, against 0.4.0 plus the pagination-key fix.
+**72 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v5, against 0.4.0 plus the pagination-key fix and the taxonomy labeling fix (14 of the 72 fail against the pre-fix markup).
 
 ## What it caught
 
@@ -83,7 +89,5 @@ If the field controls render without options, the mu-plugin stub is missing — 
 ## Known gaps
 
 - **Two control shapes, not all of them.** The Meta Box field renders as a `select` and the ACF field as a radio group, so both naming mechanisms are exercised (`<label for>` and `role="group"` + `aria-labelledby`). Meta Box `text`, ACF `checkboxes` / `true_false` / `text` and the no-choices fallback are still unrendered by any fixture.
-- **No coverage of the category / tag / taxonomy controls' labelling.** They are disabled here, and they use a `<span>` rather than a `<label>` — an unfixed gap noted in `.scratch/targeting-module/issues/03-group-control-labelling.md`.
-- **No taxonomy coverage.** The category, tag and extra-taxonomy controls are disabled on every fixture block: they would render term checkboxes for every term on the site, which is noise in a body the harness counts strings in.
 - **AJAX is off** on every fixture filter block except the v4 paging page. The AJAX path re-derives targeting in JS (`assets/js/gbqf-frontend.js`), and the targeting page measures the PHP rule; leaving it on would let a JS-side decision color a PHP-side result. The JS rule is untested. The paging page (`/gbqf-paging/`, blueprint v4) has AJAX on but only pins the server-rendered Reset href; the JS half of the pagination-key fix is a manual browser check (`.scratch/ajax-page-reset/`).
-- **Not registered in `seed-all.sh`.** That list lives in the wp-litespeed env repo, which is a separate repo — adding `query-filters` to `BLUEPRINTS` there is an env-side change to hand off. `bin/seed.sh` is plugin-blind and finds this blueprint by glob today.
+- **Not registered in `seed-all.sh`.** That list lives in the wp-litespeed env repo, which is a separate repo — adding `query-filters` to `BLUEPRINTS` there is an env-side change to hand off, and since v5 it must declare `[query-filters]="core-structures"` so `department` is seeded first (core-structures' own README consumer table should gain a row too). `bin/seed.sh` is plugin-blind and finds this blueprint by glob today.
