@@ -55,7 +55,7 @@ The tags are seeded onto the four fixture posts. The extra taxonomy is `departme
 
 ### Buttons page (v6)
 
-A third page, `/gbqf-buttons/`, carries one filter block and no loop: Categories as the `buttons` control, Apply on, and `buttonClass` / `buttonActiveClass` / `applyClass` seeded with dirty values (leading dots, a quote, angle brackets). §6 reads the radio group (`role="group"` named by its label, "Any" first with `value=""` and checked, one radio per term), the sanitized class tokens on the group, the options and the Apply button, and the id checks. Rendering `buttons` as a select instead fails 8 of its 12 assertions. The seeder JSON-encodes the block with `JSON_HEX_TAG` and `wp_slash`es it: a raw `<` is stripped by kses under wp-cli, and an unslashed insert eats the JSON backslashes, either of which renders the block with default attributes and no error.
+A third page, `/gbqf-buttons/`, carries one filter block and no loop: Categories as the `buttons` control, Apply on, and `buttonClass` / `applyClass` seeded with dirty values (leading dots, a quote, angle brackets). §6 reads the radio group (`role="group"` named by its label, "Any" first with `value=""` and checked, one radio per term), the sanitized `buttonClass` tokens on every option (the checked one included) and no class data attributes, the Apply button, and the id checks. Rendering `buttons` as a select instead fails 8 of its 12 assertions. The seeder JSON-encodes the block with `JSON_HEX_TAG` and `wp_slash`es it: a raw `<` is stripped by kses under wp-cli, and an unslashed insert eats the JSON backslashes, either of which renders the block with default attributes and no error.
 
 ## Current result
 

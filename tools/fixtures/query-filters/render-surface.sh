@@ -572,20 +572,24 @@ n=$(count_re "${BT}" '<input type="radio" class="screen-reader-text" name="[^"]*
     && ok "buttons: one radio per category term (${n})" \
     || bad 'buttons: no term radios rendered'
 
-n=$(count_re "${BT}" 'data-gbqf-class="fx-btn evilx" data-gbqf-active-class="fx-btn--on"')
-[ "${n}" = "1" ] \
-    && ok 'buttons: class tokens sanitized on the group (dots stripped, markup dropped)' \
-    || bad "buttons: expected data-gbqf-class=\"fx-btn evilx\" + data-gbqf-active-class=\"fx-btn--on\" on the group, got ${n}"
+# One class box: the sanitized buttonClass goes on EVERY option label, the
+# checked one included. The selected look is CSS only, so the markup carries no
+# per-state class and no data attributes for a script to swap.
+n=$(count_re "${BT}" 'data-gbqf-[a-z-]*class')
+[ "${n}" = "0" ] \
+    && ok 'buttons: no class data attributes' \
+    || bad "buttons: expected no class data attributes (CSS-only selected state), got ${n}"
 
+radios=$(count_re "${BT}" '<input type="radio"')
 n=$(count_re "${BT}" '<label class="gbqf-filter-option gbqf-filter-button fx-btn evilx">')
-[ "${n}" -gt 0 ] \
-    && ok "buttons: inactive options carry the sanitized button class (${n})" \
-    || bad 'buttons: no option carries "gbqf-filter-option gbqf-filter-button fx-btn evilx"'
+{ [ "${n}" -gt 0 ] && [ "${n}" = "${radios}" ]; } \
+    && ok "buttons: every option label carries the sanitized button class (${n} of ${radios})" \
+    || bad "buttons: expected all ${radios} option labels to carry \"fx-btn evilx\", got ${n}"
 
-n=$(count_re "${BT}" '<label class="gbqf-filter-option gbqf-filter-button fx-btn--on">')
+n=$(count_re "${BT}" 'gbqf-filter-buttons"[^>]*><label class="gbqf-filter-option gbqf-filter-button fx-btn evilx"><input[^>]* value="" +checked')
 [ "${n}" = "1" ] \
-    && ok 'buttons: exactly one option (Any) carries the active class' \
-    || bad "buttons: expected exactly 1 active option, got ${n}"
+    && ok 'buttons: the checked option (Any) carries the same button class' \
+    || bad "buttons: expected the checked \"Any\" label to carry \"fx-btn evilx\", got ${n}"
 
 n=$(count_re "${BT}" '<button type="submit" class="fx-apply"')
 [ "${n}" = "1" ] \
