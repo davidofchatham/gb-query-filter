@@ -24,6 +24,7 @@ Filter control types include:
 - Select dropdowns
 - Checkboxes (with multi-select support)
 - Radio buttons
+- Button groups (single-select, styled with your own CSS classes)
 - Text inputs
 
 Additional filter features:
@@ -41,7 +42,7 @@ Query Loop. Users can configure:
 - Meta Box field filters
 - ACF field filters
 - Search functionality
-- Control types (select, radio, checkboxes, text)
+- Control types (select, radio, checkboxes, buttons, text)
 - Front-end filter behavior
 - AJAX vs. full-page reload mode
 - Auto-apply vs. manual apply button
@@ -102,7 +103,8 @@ error.
     -   Choose taxonomies (categories, tags, custom)
     -   Add Meta Box fields (if Meta Box plugin is active)
     -   Add ACF fields (if ACF plugin is active)
-    -   Select control types (auto, select, radio, checkboxes, text)
+    -   Select control types (auto, select, radio, checkboxes, buttons, text)
+    -   Style buttons and the Apply and Reset controls with your own CSS classes (Button Styles panel)
     -   Enable or disable AJAX filtering
     -   Enable or disable auto-apply mode
 4.  Publish or update the page.

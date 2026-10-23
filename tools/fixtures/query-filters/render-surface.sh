@@ -532,6 +532,77 @@ n=$(count_re "${TX}" '<label>')
 
 check_refs "${TX}" 'taxonomy page'
 
+# v6. The `buttons` control, on its own page (blueprint v6): one filter block,
+# Categories only, rendered as a group of native radios with a leading "Any".
+#
+# The block is seeded with deliberately dirty class attributes (leading dots,
+# a stray quote and angle brackets); every assertion below is on what survives
+# sanitizing. A page with no buttons group fails the first check by name, and a
+# group that fell back to a select fails it too, so removing the rendering
+# cannot read as a pass.
+BTN_PAGE='gbqf-buttons'
+BT=$(fetch '' "${BTN_PAGE}" || true)
+[ -n "${BT}" ] || err "empty response for /${BTN_PAGE}/ — reseed the blueprint (v6+)."
+
+echo "   buttons control (page: /${BTN_PAGE}/)"
+
+n=$(count_re "${BT}" '<div class="gbqf-filter-buttons" role="group" aria-labelledby="gbqf[0-9]+_cat_label"')
+[ "${n}" = "1" ] \
+    && ok 'buttons: one named radio group (role=group + aria-labelledby)' \
+    || bad "buttons: expected exactly 1 gbqf-filter-buttons role=group, got ${n} — is the control rendered (blueprint v6 seeded)?"
+
+n=$(count_re "${BT}" "<label id=\"gbqf[0-9]+_cat_label\"")
+[ "${n}" = "1" ] \
+    && ok 'buttons: the group has its label element' \
+    || bad "buttons: group label: expected exactly 1 <label id=...>, got ${n}"
+
+n=$(count_re "${BT}" '<input type="radio" name="[^"]*" value="" ')
+[ "${n}" = "1" ] \
+    && ok 'buttons: "Any" is a radio with value=""' \
+    || bad "buttons: expected exactly 1 \"Any\" radio with value=\"\", got ${n}"
+
+# "Any" comes first in the group, and is the checked one with nothing selected.
+n=$(count_re "${BT}" 'gbqf-filter-buttons"[^>]*><label[^>]*><input[^>]* value="" +checked')
+[ "${n}" = "1" ] \
+    && ok 'buttons: "Any" is first and checked when nothing is selected' \
+    || bad "buttons: expected \"Any\" first and checked, got ${n}"
+
+n=$(count_re "${BT}" '<input type="radio" name="[^"]*" value="[0-9]+"')
+[ "${n}" -gt 0 ] \
+    && ok "buttons: one radio per category term (${n})" \
+    || bad 'buttons: no term radios rendered'
+
+# One class box: the sanitized buttonClass goes on EVERY option label, the
+# checked one included. The selected look is CSS only, so the markup carries no
+# per-state class and no data attributes for a script to swap.
+n=$(count_re "${BT}" 'data-gbqf-[a-z-]*class')
+[ "${n}" = "0" ] \
+    && ok 'buttons: no class data attributes' \
+    || bad "buttons: expected no class data attributes (CSS-only selected state), got ${n}"
+
+radios=$(count_re "${BT}" '<input type="radio"')
+n=$(count_re "${BT}" '<label class="gbqf-filter-option gbqf-filter-button fx-btn evilx">')
+{ [ "${n}" -gt 0 ] && [ "${n}" = "${radios}" ]; } \
+    && ok "buttons: every option label carries the sanitized button class (${n} of ${radios})" \
+    || bad "buttons: expected all ${radios} option labels to carry \"fx-btn evilx\", got ${n}"
+
+n=$(count_re "${BT}" 'gbqf-filter-buttons"[^>]*><label class="gbqf-filter-option gbqf-filter-button fx-btn evilx"><input[^>]* value="" +checked')
+[ "${n}" = "1" ] \
+    && ok 'buttons: the checked option (Any) carries the same button class' \
+    || bad "buttons: expected the checked \"Any\" label to carry \"fx-btn evilx\", got ${n}"
+
+n=$(count_re "${BT}" '<button type="submit" class="fx-apply"')
+[ "${n}" = "1" ] \
+    && ok 'buttons: Apply takes the sanitized applyClass' \
+    || bad "buttons: expected exactly 1 <button type=\"submit\" class=\"fx-apply\">, got ${n}"
+
+n=$(count_re "${BT}" '<evil|<x>|evil"')
+[ "${n}" = "0" ] \
+    && ok 'buttons: no injected markup survived the class attributes' \
+    || bad "buttons: ${n} injected-markup fragment(s) in the rendered classes"
+
+check_refs "${BT}" 'buttons page'
+
 # ---------------------------------------------------------------------------
 # 7. Meta Box field filter through an ID-matched target. (blueprint v3)
 #

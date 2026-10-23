@@ -510,4 +510,16 @@ foreach ( $manifest['taxonomy']['blocks'] as $control ) {
 }
 $upsert_page( $manifest['taxonomy']['page'], implode( "\n\n", $tax_blocks ) );
 
+// ---------------------------------------------------------------------------
+// v6. The buttons page: one filter block, Categories as `buttons`, no loop.
+// ---------------------------------------------------------------------------
+$upsert_page(
+	$manifest['buttons']['page'],
+	// JSON_HEX_TAG, as the block editor serializes: a raw `<` in the comment is
+	// stripped by kses (wp-cli runs with no user). wp_slash, because the insert
+	// unslashes and would eat the JSON backslashes. Either corrupts the JSON and
+	// silently renders the block with default attributes.
+	wp_slash( '<!-- wp:gbqf/query-filter ' . wp_json_encode( $manifest['buttons']['attrs'], JSON_HEX_TAG ) . ' /-->' )
+);
+
 WP_CLI::success( '[query-filters] seeded (manifest v' . $manifest['version'] . ')' );
