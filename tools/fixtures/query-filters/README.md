@@ -53,9 +53,13 @@ A second page, `/gbqf-taxonomy/`, carries two filter blocks and no loop: one ren
 
 The tags are seeded onto the four fixture posts. The extra taxonomy is `department`, **borrowed from the core-structures blueprint** (`bws-gb-dynamic-tags-extensions`) for the taxonomy only: seed core-structures first, and never assign `department` a term here — its own term counts are a baseline of theirs, and site-views hides posts that carry one. `seed.php` and `verify.php` fail by name if it is absent, and §6 fails if a branch rendered nothing, rather than passing over a control that never appeared. There is no manifest-version pin: the dependency is "the taxonomy exists and has terms".
 
+### Buttons page (v6)
+
+A third page, `/gbqf-buttons/`, carries one filter block and no loop: Categories as the `buttons` control, Apply on, and `buttonClass` / `buttonActiveClass` / `applyClass` seeded with dirty values (leading dots, a quote, angle brackets). §6 reads the radio group (`role="group"` named by its label, "Any" first with `value=""` and checked, one radio per term), the sanitized class tokens on the group, the options and the Apply button, and the id checks. Rendering `buttons` as a select instead fails 8 of its 12 assertions. The seeder JSON-encodes the block with `JSON_HEX_TAG` and `wp_slash`es it: a raw `<` is stripped by kses under wp-cli, and an unslashed insert eats the JSON backslashes, either of which renders the block with default attributes and no error.
+
 ## Current result
 
-**72 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v5, against 0.4.0 plus the pagination-key fix and the taxonomy labeling fix (14 of the 72 fail against the pre-fix markup).
+**84 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v6, against the `feat/button-filters` branch (the `buttons` control). Through v5, 72 passed on 0.4.0 plus the pagination-key fix and the taxonomy labeling fix (14 of the 72 fail against the pre-fix markup).
 
 ## What it caught
 

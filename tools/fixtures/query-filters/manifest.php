@@ -67,8 +67,10 @@ return array(
 	 * category, tag and extra-taxonomy controls were never rendered by any
 	 * fixture, so how they are NAMED — a checkbox set needs a group name, a select
 	 * needs a `<label for>` — was unmeasured.
+	 *
+	 * v6 adds the `buttons` control, on its own page (`buttons`, below).
 	 */
-	'version'       => 5,
+	'version'       => 6,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
@@ -358,6 +360,33 @@ return array(
 		),
 		'extra'  => 'department',
 		'blocks' => array( 'checkboxes', 'select' ),
+	),
+
+	/*
+	 * v6. The buttons page: one filter block, Categories only, `buttons`.
+	 *
+	 * Its own page for the same reason as `taxonomy`: a radio per term is noise
+	 * on the targeting page, and the taxonomy page's checks count labels and
+	 * ids per stem, which a third block would double. The class attributes are
+	 * seeded DIRTY (leading dots, a quote, angle brackets) because the check is
+	 * on what the sanitizer leaves: `fx-btn evilx` for the button class.
+	 */
+	'buttons'       => array(
+		'page'  => array(
+			'slug'  => 'gbqf-buttons',
+			'title' => 'GBQF buttons control',
+		),
+		'attrs' => array(
+			'targetId'               => '',
+			'enableSearch'           => false,
+			'enableCategories'       => true,
+			'categoriesControlType'  => 'buttons',
+			'enableApplyButton'      => true,
+			'enableAjax'             => false,
+			'buttonClass'            => ' .fx-btn  evil"<x> ',
+			'buttonActiveClass'      => '.fx-btn--on',
+			'applyClass'             => '.fx-apply',
+		),
 	),
 
 	/*
