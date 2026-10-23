@@ -1,8 +1,6 @@
 # Changelog
 
-All notable changes to GB Query Filter are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Versioning follows [Semantic Versioning](https://semver.org/).
+All notable changes to GB Query Filter are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
@@ -10,237 +8,115 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **`buttons` control type.** A single-select group of styled buttons for short choice sets, with a leading "Any" that clears the field. Available for Categories, Tags, extra taxonomies, and the per-field control override of Meta Box and ACF fields that have choices (including ACF true/false, rendered as Yes/No). Built from native radios inside labels in a named `role="group"`, so keyboard, labels and the no-JavaScript submit work as they do for the select, and the URL parameters are identical. Multi-select stays `checkboxes`.
-- **Button style classes.** Three block-wide attributes take space-separated CSS class names (GenerateBlocks styles or any theme class): `buttonClass` (every option, checked or not), `applyClass` (the Apply button) and `resetClass` (the Reset link). A new "Button Styles" panel in the block editor sets them. The selected option is styled in CSS only, via the label containing the checked radio: target `.your-class:has(input:checked)` (or nest it in a GenerateBlocks style), or rely on the plugin's default look when no class is set. The checked option is always bold, whatever classes are set, so selection never rests on color alone. Each token is sanitized and a leading `.` is stripped, so a pasted `.my-button` works. The default look is zero-specificity, so an author class always wins. Known gap: keyboard focus shows the plugin's outline, not the author class's own `:focus` effect.
+- **Button style classes.** Three block-wide attributes, set in a new "Button Styles" editor panel, take space-separated CSS class names (GenerateBlocks styles or any theme class): `buttonClass` (every option), `applyClass` (the Apply button) and `resetClass` (the Reset link). Tokens are sanitized and a leading `.` is stripped, so a pasted `.my-button` works. Style the selected option with `.your-class:has(input:checked)`; with no class set, the plugin's zero-specificity default look applies, so any author class wins. The checked option is always bold, so selection never rests on color alone. Known gap: keyboard focus shows the plugin's outline, not the class's own `:focus` effect.
 - [fork] **In-dashboard updates from GitHub Releases.** Sites running a release build now see new versions under Dashboard → Updates, via the vendored Plugin Update Checker 5.7 (`libs/plugin-update-checker/`). Only a release carrying the `gb-query-filter-<version>.zip` built by the release workflow is offered; a bare tag offers nothing.
-
-### Fixed
-- **Changing a filter from a later page rendered an empty loop.** The AJAX request kept the Query's pagination param (`query-{uniqueId}-page`), so narrowing results from page 3 to a set that fits on one page asked WordPress for a page that no longer exists. A filter change now removes the target Query's page key, and Reset clears it too. Other Queries' pagination on the same page is left alone.
-- **Taxonomy checkbox sets (Categories, Tags, extra taxonomies) had no group name.** Each option was announced ("GBQF Fixture, checkbox") without the set's name ("Categories"). The set is now a `role="group"` named by its visible label, the same as the Meta Box and ACF checkbox and radio groups (WCAG 1.3.1, 4.1.2).
 
 ### Changed
 - Taxonomy selects are now named by a real `<label for>` whose visible text is the name, instead of an `aria-label` beside a bare `<span>`, so clicking the label focuses the control.
 - Field labels (taxonomy, Meta Box, ACF) are now all `<label class="gbqf-filter-label">`. Meta Box and ACF labels pick up that class's styling (semibold, 13px), so they match the taxonomy labels; override `.gbqf-filter-label` if your theme styled them differently.
+- Meta Box and ACF field labels are now built from the control actually rendered, so a future control type cannot produce a dangling `for`. No markup change.
 - PHP now follows the WordPress coding standards (tabs, long arrays, docblocks), checked by `composer lint` (phpcs). No behavior change.
 - [fork] `composer lint` runs as a blocking GitHub Actions check.
-- Meta Box and ACF field labels are now built from the control that was actually rendered: only a branch that emits the single control id sets the label's `for`, so the label no longer re-derives which control types carry one. A new control type defaults to a labelled group, so it cannot produce a dangling `for` by omission. No markup change.
 
 ### Removed
 - `Filters::register_target()`, deprecated in 0.4.0. Call `Targeting::register()` instead; `Filters` no longer has any part in target registration.
 
+### Fixed
+- **Changing a filter from a later page rendered an empty loop.** The AJAX request kept the Query's page param (`query-{uniqueId}-page`), so narrowing from page 3 to a one-page result asked for a page that no longer exists. A filter change now drops the target Query's page key, and Reset drops it too.
+- **Taxonomy checkbox sets (Categories, Tags, extra taxonomies) had no group name.** Each option was announced ("GBQF Fixture, checkbox") without the set's name ("Categories"). The set is now a `role="group"` named by its visible label, the same as the Meta Box and ACF checkbox and radio groups (WCAG 1.3.1, 4.1.2).
+
 ## [0.4.0] — 2026-08-13
 
-### Security
-- **Any post meta key was filterable through a filter block that declared no fields.** A block's
-  field lists (`metaBoxFields` / `acfFields`) are the statement of which fields it filters on, but an
-  **empty** list was documented and implemented as "process all keys". The default filter block
-  enables no custom-field filtering at all, so the vulnerable list was the *default* one, not an edge
-  case: on any loop such a block legitimately claimed, `gbqf[<target>][meta][<any-key>]=<value>`
-  filtered the results — including protected `_`-prefixed keys the site never exposed.
-
-  With an undeclared, protected key a correct value returned 1 row and a wrong value 0 — a value
-  oracle over arbitrary post meta, reachable unauthenticated, letting a visitor confirm or deny meta
-  values by watching the row count. That is security invariant 1 in [CONTEXT.md](CONTEXT.md) —
-  "front-end filtering must not expose anything a user couldn't see without the filter". The
-  blueprint asserts both values now, so it is a regression test rather than a one-off measurement.
-
-  An empty ownership list now means **owns nothing**. A block filters only on fields it declares.
-
-  The change bites **per list**, not only on blocks that declare nothing at all: a block declaring
-  only ACF fields also had an empty Meta Box list, so every URL meta key additionally ran through
-  `get_meta_filters()` and could emit a second, duplicate meta clause. Such a block's behaviour
-  changes too.
-
-- **A Query Loop that no filter block targets could be filtered from the URL.** Any loop carrying a
-  class matching `gbqf-target-*` passed the gate without any check that a filter block had
-  registered that name, and was then filtered by flat `?gbqf_search=` (and sibling) parameters.
-  This broke security invariant 2 in [CONTEXT.md](CONTEXT.md) — "no filtering an unconnected loop" —
-  and the intent of [ADR-0001](docs/adr/0001-targeted-scope-default.md).
-
-  The legacy `gbqf-target-*` branch is **removed**. It protected nothing: upstream never gated on it
-  (`should_apply_to_attributes()` returned `true` unconditionally), the only written form of the
-  convention was a stale docblock naming a bare `gbqf-target` class that the `gbqf-target-` prefix
-  does not even match, and the check was introduced by this fork in 0.2.0. A loop is now claimed
-  only by a **registered** HTML ID or a **registered** target name appearing as one of its classes.
-
-- **An unrecognised filter scope failed open.** Any scope value other than `all` or `targeted` — a
-  typo in a `gbqf_filter_scope` callback, a stale `data-gbqf-scope` attribute — fell through to
-  "apply to every Query Loop", reinstating exactly the blanket behaviour ADR-0001 forbids. Unknown
-  scope values are now treated as `targeted` (fail closed).
-
-### Fixed
-- **Custom-field filter labels were not associated with their control** ([ADR-0003](docs/adr/0003-accessibility-target-current-wcag-aa.md)).
-  The ACF branch emitted a bare `<label>` in every case, so its select and text controls had no
-  programmatic association at all; the Meta Box branch emitted `for="gbqf_mb_{id}"` over its radio
-  *group*, where no element carries that id — a dangling reference. Both now emit `for` only where a
-  single control below actually sets the id.
-
-  Group controls (Meta Box radio; ACF radio, checkboxes, true/false) now get their name from
-  `role="group"` + `aria-labelledby` pointing back at the field label, since a group has no single
-  control for a `for` to reference.
-
-- **Every control on a page with more than one filter block shared its id with the others.** Control
-  ids were fixed strings (`gbqf_search_input`, `gbqf_cat_12`, `gbqf_mb_colour`), unique only while a
-  page carried exactly one filter block. Two blocks — the ordinary case for a page with two Query
-  Loops — emitted duplicate ids, and a duplicate id makes every `for` on the page resolve to the
-  first match, so a label could name a control inside a different filter form. Ids now carry a
-  per-block prefix. They are not documented, styled, or referenced by JS, so nothing depends on the
-  old values.
-
-- **Class-based scoped targeting never filtered anything.** A Query Loop claimed by *class* rather
-  than by HTML ID received no filter state: the `Params` scope was taken from the loop's own id
-  instead of the matched target key, so the filter form wrote `gbqf[<target>][…]` while the query
-  read `gbqf[<loop-id>][…]`. Silent no-op, no error. Callers are now handed a `Target` carrying the
-  registered key and have no means to re-derive an id, so the mistake is not expressible.
-
 ### Added
-- **`Targeting` and `Target`** ([includes/class-gbqf-targeting.php](includes/class-gbqf-targeting.php),
-  [includes/class-gbqf-target.php](includes/class-gbqf-target.php)). `Targeting::match( $attributes )`
-  returns a `Target` or `null` — one question, one answer, one place. It replaces a gate
-  (`should_apply_to_attributes()`) and a separate lookup (`get_matched_target()`) that walked the
-  same match chain independently and disagreed, plus a third re-derivation of the loop id in the
-  caller. Both defects above were consequences of that split; neither is expressible now.
-
-  `Targeting` owns the registry, the scope decision, the per-block `data-gbqf-*` overrides and the
-  `gbqf_should_apply_to_block` filter. `Filters` sheds ~180 lines and keeps query mutation. Scope is
-  resolved **per Query Loop, at render time** — `gbqf_filter_scope` keeps working from a theme's
-  `functions.php` or from `init`, both of which run after the plugin bootstraps.
-
-- **`query-filters` fixture blueprint** (`tools/fixtures/query-filters/`) — the first automated
-  coverage of the targeting rule. One page, five Query Loops over the same posts, differing only in
-  how a filter block claims them, so any difference in the rendered result set is attributable to
-  the targeting rule and nothing else. Dev-only; excluded from the distributable ZIP.
-
-  Every defect in this release was **committed as a failing test before being fixed**, so "this was
-  broken and now is not" is a diff between two runs rather than an assertion. Blueprint v2 reported
-  2 failed / 23 passed against 0.3.0; v3 reported 4 failed / 42 passed before the field-ownership
-  and label fixes. Against this release, 47 passed.
-
-  Blueprint **v3** adds custom-field coverage: a Meta Box field and an ACF field registered from one
-  manifest declaration (via `schema.php` and a mu-plugin stub, because the definitions must exist at
-  *render* time, not only during the seed), owned disjointly by two filter blocks. That is what
-  caught the ownership defect above, and it re-proves the class-match fix on a second axis — a
-  `Target` carries field lists as well as a scope, and both must travel off the matched target key.
-
-  Split into `verify.php` (the fixtures are real) and `render-surface.sh` (behaviour, over real
-  HTTP) because wp-cli is structurally blind here: registration happens in the filter block's
-  `render_callback` and the targeting decision inside `generateblocks_query_wp_query_args` during a
-  render. Under wp-cli neither fires, so every "this loop was not filtered" check passes vacuously.
+- **`Targeting` and `Target`** ([includes/class-gbqf-targeting.php](includes/class-gbqf-targeting.php), [includes/class-gbqf-target.php](includes/class-gbqf-target.php)). `Targeting::match( $attributes )` returns a `Target` or `null`, replacing a gate and a separate lookup that walked the same match chain independently and disagreed (the cause of the class-targeting and field-ownership defects below). `Targeting` owns the registry, the scope decision, the per-block `data-gbqf-*` overrides and the `gbqf_should_apply_to_block` filter; `Filters` keeps query mutation. Scope is resolved per Query Loop at render time, so `gbqf_filter_scope` works from a theme's `functions.php` or from `init`.
+- [fork] **`query-filters` fixture blueprint** (`tools/fixtures/query-filters/`): the first automated coverage of the targeting rule, with five Query Loops over the same posts that differ only in how a filter block claims them, plus a Meta Box and an ACF field owned by two blocks. Checks run over real HTTP, since wp-cli never fires the render-time hooks. Every defect in this release was committed as a failing test before its fix. Dev-only; excluded from the ZIP.
 
 ### Changed
-- Flat (`gbqf_*`) URL parameters are reachable **only** under the legacy `all` scope, or when a
-  Query Loop is force-enabled. Under the default `targeted` scope an unscoped filter block claims
-  nothing, so its flat parameters reach no loop. This is not new behaviour — it is ADR-0001 working
-  as designed — but CONTEXT.md previously described flat mode as a generally supported
-  backward-compatible mode, which it is not.
+- Flat (`gbqf_*`) URL parameters reach a loop **only** under the legacy `all` scope or when the loop is force-enabled. Under the default `targeted` scope an unscoped filter block claims nothing. Not new behavior (ADR-0001 as designed); CONTEXT.md had wrongly described flat mode as generally supported.
 
 ### Deprecated
-- `Filters::register_target()` — use `Targeting::register()`. The old method forwarded and emitted a deprecation notice; it has since been removed (see the Unreleased section).
+- `Filters::register_target()`. Use `Targeting::register()`. Removed in 0.5.0.
 
 ### Removed
-- `Filters::should_apply_to_attributes()`, `Filters::get_matched_target()`, `Filters::is_targeted()`,
-  `Filters::get_block_id_from_attributes()`, `Filters::class_contains()` and
-  `Filters::get_block_override()` (all `protected`, undocumented). Their behaviour lives in
-  `Targeting`, mostly as private methods — `get_block_id_from_attributes()` in particular is now
-  unreachable from callers by design, since its reachability is what caused the class-match defect.
+- `Filters::should_apply_to_attributes()`, `get_matched_target()`, `is_targeted()`, `get_block_id_from_attributes()`, `class_contains()` and `get_block_override()` (all `protected`, undocumented). Their behavior moved into `Targeting`, mostly as private methods.
+
+### Fixed
+- **Custom-field filter labels were not associated with their control** ([ADR-0003](docs/adr/0003-accessibility-target-current-wcag-aa.md)). ACF labels had no `for`, and the Meta Box radio label pointed `for` at an id no element carried. Labels now set `for` only over a single control; group controls (Meta Box radio; ACF radio, checkboxes, true/false) are named by `role="group"` + `aria-labelledby`.
+- **Two filter blocks on one page produced duplicate control ids**, so a label could point at a control in the other form. Ids now carry a per-block prefix. Nothing documented, styled or scripted used the old ids.
+- **Class-based scoped targeting never filtered anything.** The query read its scope from the loop's own id instead of the matched target key, so the form wrote `gbqf[<target>][…]` while the query read `gbqf[<loop-id>][…]`. Callers now receive a `Target` carrying the registered key.
+
+### Security
+- **Any post meta key was filterable through a block that declared no fields.** An empty `metaBoxFields` / `acfFields` list meant "process all keys", and empty is the default, so `gbqf[<target>][meta][<any-key>]=<value>` filtered results on any claimed loop, including protected `_`-prefixed keys. Comparing row counts let an unauthenticated visitor confirm or deny meta values (security invariant 1 in [CONTEXT.md](CONTEXT.md)). An empty list now means the block owns no fields. This applies per list: a block declaring only ACF fields no longer runs URL meta keys through `get_meta_filters()` as well, which could also add a duplicate meta clause.
+- **A Query Loop no filter block targets could be filtered from the URL.** Any loop with a `gbqf-target-*` class passed the gate without a registration check and took flat `?gbqf_search=`-style parameters (security invariant 2 in [CONTEXT.md](CONTEXT.md), [ADR-0001](docs/adr/0001-targeted-scope-default.md)). The legacy `gbqf-target-*` branch, added by this fork in 0.2.0 and never relied on upstream, is removed. A loop is claimed only by a **registered** HTML ID or target name among its classes.
+- **An unrecognized filter scope failed open.** Any value other than `all` or `targeted` (a callback typo, a stale `data-gbqf-scope`) applied filtering to every Query Loop. Unknown scopes are now treated as `targeted`.
 
 ## [0.3.0] — 2026-08-13
 
-### Changed
-- Plugin display name is now **GB Query Filter** (was "GB Query Filters"), matching the README and
-  the repository. `Plugin URI` now points at <https://github.com/davidofchatham/gb-query-filter>.
-  The admin menu entry stays **GenerateBlocks → Query Filters**.
-- **Slug normalized to `gb-query-filter` (singular) everywhere.** The main plugin file is renamed
-  `gb-query-filters.php` → `gb-query-filter.php` and the text domain `gb-query-filters` →
-  `gb-query-filter`, matching the repository name, the Plugin URI, the settings page slug and the
-  install directory. Block name (`gbqf/query-filter`), all `gbqf_*` option keys and all script and
-  style handles are unchanged, so **no settings are lost** — but because WordPress identifies a
-  plugin by its main file path, an existing install will show the plugin as deactivated after the
-  update and must be reactivated once.
-
 ### Added
-- GitHub Actions release workflow: pushing a `v*` tag builds a clean distributable ZIP
-  (`gb-query-filter-<version>.zip`, excluding dev files listed in `.distignore`) and attaches it to
-  the GitHub release. The build fails if the tag version does not match both the plugin header
-  `Version:` and `GBQF_VERSION`. Untrusted workflow input (the `workflow_dispatch` tag) reaches the
-  shell only through the environment, never by template interpolation, and the tag must match
-  `v<digits>…`; `contents: write` is scoped to the build job rather than the whole workflow.
-- README documents the upgrade step this rename requires and points to the release asset rather
-  than the repository ZIP.
+- [fork] GitHub Actions release workflow: pushing a `v*` tag builds `gb-query-filter-<version>.zip` (excluding `.distignore` paths) and attaches it to the release. The build fails unless the tag matches both the header `Version:` and `GBQF_VERSION`. Workflow input reaches the shell only through the environment, and `contents: write` is scoped to the build job.
+- [fork] README documents the upgrade step the rename needs and points to the release asset instead of the repository ZIP.
+
+### Changed
+- Plugin display name is now **GB Query Filter** (was "GB Query Filters"). The admin menu entry stays **GenerateBlocks → Query Filters**.
+- [fork] `Plugin URI` points at <https://github.com/davidofchatham/gb-query-filter>.
+- **Slug is now `gb-query-filter` (singular) everywhere:** main file `gb-query-filters.php` → `gb-query-filter.php`, text domain `gb-query-filters` → `gb-query-filter`. The block name, `gbqf_*` options and script/style handles are unchanged, so no settings are lost, but WordPress tracks a plugin by its main file, so existing installs show it deactivated after updating and must reactivate it once.
 
 ## [0.2.1] — 2026-08-13
 
-### Fixed
-- Block now registers with `apiVersion` / `api_version` 3, clearing the WordPress 6.9
-  "Block with API version 2 or lower is deprecated" console warning and making the block
-  iframe-editor compatible. The editor preview is wrapped in a `useBlockProps()` element so
-  block selection works inside the iframe.
-- PHP 8 deprecation emitted on every request (including every WP-CLI call): optional parameter
-  `$allowed_field_names` was declared before required `$raw_meta` in `Filters::get_meta_filters()`
-  and `Filters::get_acf_filters()`. Both now default to `[]`.
-
-- Editor control deprecation warnings ("36px default size ... is deprecated since version 6.8"):
-  all `TextControl`, `SelectControl`, `ComboboxControl` and `FormTokenField` instances now opt in
-  via `__next40pxDefaultSize`, and all of those plus `ToggleControl` via `__nextHasNoMarginBottom`.
-
 ### Changed
-- Editor script dependencies: `wp-editor` → `wp-block-editor`, added `wp-server-side-render`
-  so `ServerSideRender` resolves from its own package rather than the deprecated
-  `wp.components` alias.
-- Removed a dead hidden `TextControl` in the Additional Taxonomies panel that rendered with
-  `display: none` and a no-op `onChange` — the adjacent `FormTokenField` already carries the label.
+- Editor script dependencies: `wp-editor` → `wp-block-editor`, plus `wp-server-side-render`, so `ServerSideRender` no longer comes from the deprecated `wp.components` alias.
+- Removed a hidden, no-op `TextControl` from the Additional Taxonomies panel.
+
+### Fixed
+- Block registers with API version 3: clears the WordPress 6.9 "API version 2 or lower is deprecated" warning and works in the iframed editor (preview wrapped in `useBlockProps()`).
+- PHP 8 deprecation on every request: optional `$allowed_field_names` preceded required `$raw_meta` in `Filters::get_meta_filters()` and `get_acf_filters()`. Both now default to `[]`.
+- Editor "36px default size" deprecation warnings: controls opt in to `__next40pxDefaultSize` and `__nextHasNoMarginBottom`.
 
 ## [0.2.0] — 2026-06-15
 
-All changes in this release were developed on top of the upstream 0.1.2 baseline.
-There were no intervening tagged releases, so every addition, change, and fix
-below is collapsed into 0.2.0.
+Everything built on top of the upstream 0.1.2 baseline before the first tagged fork release, collapsed into one version.
 
 ### Added
 - Advanced Custom Fields (ACF) integration
-- Targeted mode (default): filters only apply to Query Loop blocks with a matching HTML ID or class
-- Scoped URL parameters (`gbqf[targetId][key]`) enabling multiple independent filter groups per page
-- Class-based targeting for GenerateBlocks' unique `gb-query-*` class identifiers
-- `gbqf_filter_scope`, `gbqf_filter_priority`, `gbqf_preserve_search`, `gbqf_should_apply_to_block`, `gbqf_enable_debug_logging` developer filters
-- Per-Query-Loop block overrides via `data-gbqf-enabled`, `data-gbqf-scope`, `data-gbqf-priority` HTML attributes
-- `Settings` class with static accessors for all global options
-- Admin settings page under GenerateBlocks → Query Filters
-- `Settings::is_debug_enabled()` static method backed by `gbqf_enable_debug_logging` option
-- `window.GBQF_DEBUG` JS flag driven by the debug logging setting — gates frontend console output
-- Client-side reset URL refresh registry (`window.GBQF_resetUpdaters`): after each AJAX submission all filter blocks recompute their reset link href from the live URL, ensuring each block's reset button removes only its own scoped parameters
-- `GBQF\Params` class centralizing all scoped/flat URL parameter reads and URL construction
+- Targeted mode (default): filters apply only to Query Loops with a matching HTML ID or class
+- Scoped URL parameters (`gbqf[targetId][key]`) for multiple independent filter groups per page
+- Class-based targeting via GenerateBlocks' `gb-query-*` classes
+- Developer filters: `gbqf_filter_scope`, `gbqf_filter_priority`, `gbqf_preserve_search`, `gbqf_should_apply_to_block`, `gbqf_enable_debug_logging`
+- Per-Query-Loop overrides via `data-gbqf-enabled`, `data-gbqf-scope`, `data-gbqf-priority`
+- Admin settings page under GenerateBlocks → Query Filters, read through a `Settings` class of static accessors
+- Debug logging setting, which also sets `window.GBQF_DEBUG` to gate frontend console output
+- After each AJAX submit, every filter block recomputes its Reset href from the live URL (`window.GBQF_resetUpdaters`), so each Reset clears only its own scoped parameters
+- `GBQF\Params` class for all scoped/flat URL parameter reads and URL building
 
 ### Changed
-- Default filter scope changed from "all" to "targeted"
-- Default hook priority changed from 10 to 20 (runs after most other plugins)
-- ACF fields now identified by field name instead of field key
-- Unified `gbqf_meta` URL namespace for both Meta Box and ACF fields (replaces preliminary `gbqf_acf` parameter)
-- `class-gbqf-filters.php` now routes option reads through `Settings::*()` methods instead of calling `get_option()` directly
+- Default filter scope: "all" → "targeted"
+- Default hook priority: 10 → 20 (runs after most other plugins)
+- ACF fields identified by field name, not field key
+- Meta Box and ACF share the `gbqf_meta` URL namespace
+- `Filters` reads options through `Settings::*()`, not `get_option()`
 
 ### Deprecated
-- `gbqf_acf[field]` URL parameters (silently ignored; use `gbqf_meta[field]`)
+- `gbqf_acf[field]` URL parameters (ignored; use `gbqf_meta[field]`)
 
 ### Removed
-- Always-on `GBQF_META_FIELDS` dev console.log from block editor JS
+- Always-on `GBQF_META_FIELDS` console.log in the editor
 
 ### Fixed
-- LICENSE file shipped GPLv3 text while the plugin declared GPL-2.0-or-later; replaced with canonical GPLv2 and added `License`/`License URI` headers to the plugin file
-- `gbqf_preserve_existing_search` filter renamed to canonical `gbqf_preserve_search` (was an undocumented internal name)
-- Duplicate `gbqf-editor` style registration removed from `class-gbqf-blocks.php`
-- Reset URL construction now uses `home_url()` instead of `$_SERVER['HTTP_HOST']` to prevent HTTP Host Header Injection in misconfigured environments
-- AJAX reset links pointed to stale PHP-rendered URLs after `history.replaceState` updates; reset hrefs are now recomputed from the live URL after each AJAX submission
-- AJAX URL building retained stale numeric-indexed params (e.g. `[0]=31` from `http_build_query`) that prevented filter clearing via AJAX; stale params for the submitting block are now removed before appending fresh form values
-- Multiple checkbox values were silently dropped when building AJAX params (`params.set` replaced with `params.append`)
-- `http_build_query()` used `arg_separator.output` ini setting which produces `&amp;` separators on some servers, causing double-encoded ampersands (`&#038;`) in scoped reset URLs; now uses explicit `'&'` separator and decodes HTML entities in the `home_url()` output before URL parsing
-- URL fragments introduced by double-encoded ampersands (`#038;...`) are now stripped from the AJAX request URL and reset link href before use
-- `get_block_id_from_attributes()` did not handle GenerateBlocks' `uniqueId` attribute, preventing class-based targeting for GB Query blocks without a manually set HTML ID; added fallback that constructs `gb-query-{uniqueId}`
-- `enableApplyButton` PHP attribute default was `true` (always show Apply button) while the JS block default was `false` (auto-apply mode); PHP default aligned to `false` — auto-apply now works correctly for new blocks
-- Empty form field values (cleared text inputs, "any" select options) were appended to the AJAX request URL, polluting it with `key=` entries; empty values are now skipped when building AJAX params
+- LICENSE shipped GPLv3 while the plugin declared GPL-2.0-or-later; now GPLv2, with `License` / `License URI` headers
+- Internal `gbqf_preserve_existing_search` filter renamed to the canonical `gbqf_preserve_search`
+- Duplicate `gbqf-editor` style registration
+- Reset URL built from `home_url()` instead of `$_SERVER['HTTP_HOST']` (Host Header Injection)
+- After AJAX `history.replaceState`, Reset links kept stale server-rendered URLs
+- Stale numeric-indexed params (`[0]=31`) blocked clearing a filter over AJAX
+- Multiple checkbox values dropped from AJAX params (`params.set` → `params.append`)
+- `http_build_query()` honored `arg_separator.output`, producing `&#038;` in scoped Reset URLs on some servers; now uses `'&'` and decodes `home_url()` entities, and stray `#038;` fragments are stripped
+- Class-based targeting failed for GB Query blocks without a manual HTML ID; `gb-query-{uniqueId}` is now derived
+- PHP default for `enableApplyButton` was `true` while the editor's was `false`; aligned to `false` so auto-apply works for new blocks
+- Empty values (cleared inputs, "Any" options) added `key=` entries to the AJAX URL
 
 ## [0.1.2] — Upstream baseline
 
-The starting point inherited from the upstream source (initial import). No granular
-release history exists prior to this point; the features below describe what 0.1.2
-shipped, reconstructed from the imported code.
+Inherited from the upstream source; no earlier history exists. Reconstructed from the imported code.
 
 ### Added
 - `gbqf/query-filter` block with server-side rendering
