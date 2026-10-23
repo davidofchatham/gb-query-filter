@@ -79,7 +79,7 @@
                 default: 'checkboxes',
             },
 
-            // Space-separated GenerateBlocks style classes for the `buttons` control and actions.
+            // Space-separated CSS classes for the `buttons` control and actions.
             buttonClass: {
                 type: 'string',
                 default: '',
@@ -448,7 +448,7 @@
                 ( enableMetaBoxFilter && ( metaBoxFields || [] ).some( ( f ) => f.controlType === 'buttons' ) ) ||
                 ( enableAcfFilter && ( acfFields || [] ).some( ( f ) => f.controlType === 'buttons' ) );
 
-            const classHelp = __( 'Space-separated GenerateBlocks style class names', 'gb-query-filter' );
+            const classHelp = __( 'Space-separated CSS class names', 'gb-query-filter' );
             const classBox = ( label, key, help ) =>
                 el( TextControl, {
                     __next40pxDefaultSize: true,
@@ -777,7 +777,7 @@
                                     __( 'Button class', 'gb-query-filter' ),
                                     'buttonClass',
                                     __(
-                                        'Space-separated GenerateBlocks style class names. Style the selected option inside the GB style with &:has(input:checked).',
+                                        'Space-separated CSS class names (e.g. GenerateBlocks styles). Style the selected option with :has(input:checked).',
                                         'gb-query-filter'
                                     )
                                 ),

@@ -178,7 +178,7 @@ class Blocks {
 						'type'    => 'array',
 						'default' => array(),
 					),
-					// Space-separated GenerateBlocks style classes for the `buttons` control and actions.
+					// Space-separated CSS classes for the `buttons` control and actions.
 					'buttonClass'                => array(
 						'type'    => 'string',
 						'default' => '',

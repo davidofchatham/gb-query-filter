@@ -24,7 +24,7 @@ Filter control types include:
 - Select dropdowns
 - Checkboxes (with multi-select support)
 - Radio buttons
-- Button groups (single-select, styled with your own GenerateBlocks classes)
+- Button groups (single-select, styled with your own CSS classes)
 - Text inputs
 
 Additional filter features:
@@ -104,7 +104,7 @@ error.
     -   Add Meta Box fields (if Meta Box plugin is active)
     -   Add ACF fields (if ACF plugin is active)
     -   Select control types (auto, select, radio, checkboxes, buttons, text)
-    -   Style buttons and the Apply and Reset controls with GenerateBlocks classes (Button Styles panel)
+    -   Style buttons and the Apply and Reset controls with your own CSS classes (Button Styles panel)
     -   Enable or disable AJAX filtering
     -   Enable or disable auto-apply mode
 4.  Publish or update the page.
