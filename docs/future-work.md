@@ -76,6 +76,28 @@ Open: Whether two blocks on one loop is a supported configuration at all. If not
 
 Blocked by: decision:whether two filter blocks on one loop are supported  •  Interacts with: FW-1
 
+#### FW-6 — Button filter control
+
+An author-chosen `buttons` control type for short choice sets: a single-select row of styled radio buttons with a leading "Any", plus block-wide GenerateBlocks style classes for the option buttons, the Apply button and the Reset link.
+
+Detail home: `.scratch/button-filters/spec.md` and its tickets under `.scratch/button-filters/issues/`
+
+Progress: Specified in a grilling session on 2026-10-23. Build is live on branch `feat/button-filters`.
+
+Blocked by: —  •  Interacts with: FW-3 (the button groups are new controls under the AA gate), FW-7
+
+#### FW-7 — GenerateBlocks style picker for button classes
+
+Replace FW-6's free-text class boxes with a picker that suggests the site's GenerateBlocks global-style class names, as GenerateBlocks itself does. The attributes stay plain strings, so it is an editor-only change.
+
+Detail home: `.scratch/button-filters/spec.md` (decision 9)
+
+Progress: Not started.
+
+Open: Whether GenerateBlocks exposes its global-style class list to the editor in a form a third-party block can read.
+
+Blocked by: row:FW-6  •  Interacts with: FW-6
+
 ### Accessibility
 
 #### FW-3 — WCAG 2.2 AA baseline and its follow-ups
