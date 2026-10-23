@@ -79,6 +79,24 @@
                 default: 'checkboxes',
             },
 
+            // Space-separated GenerateBlocks style classes for the `buttons` control and actions.
+            buttonClass: {
+                type: 'string',
+                default: '',
+            },
+            buttonActiveClass: {
+                type: 'string',
+                default: '',
+            },
+            applyClass: {
+                type: 'string',
+                default: '',
+            },
+            resetClass: {
+                type: 'string',
+                default: '',
+            },
+
             enableAjax: {
                 type: 'boolean',
                 default: false,
@@ -149,6 +167,10 @@
                 enableAjax,
                 enableExtraTaxonomies,
                 enableApplyButton,
+                buttonClass,
+                buttonActiveClass,
+                applyClass,
+                resetClass,
                 extraTaxonomies,
                 enableMetaBoxFilter,
                 metaBoxFieldId,
@@ -306,6 +328,7 @@
                                 { label: __( 'Auto (based on options)', 'gb-query-filter' ), value: 'auto' },
                                 { label: __( 'Select dropdown', 'gb-query-filter' ), value: 'select' },
                                 { label: __( 'Radio buttons', 'gb-query-filter' ), value: 'radio' },
+                                { label: __( 'Buttons', 'gb-query-filter' ), value: 'buttons' },
                                 { label: __( 'Text input', 'gb-query-filter' ), value: 'text' },
                             ],
                             onChange: ( v ) => {
@@ -390,6 +413,7 @@
                                 { label: __( 'Auto (based on field type)', 'gb-query-filter' ), value: 'auto' },
                                 { label: __( 'Select dropdown', 'gb-query-filter' ), value: 'select' },
                                 { label: __( 'Radio buttons', 'gb-query-filter' ), value: 'radio' },
+                                { label: __( 'Buttons', 'gb-query-filter' ), value: 'buttons' },
                                 { label: __( 'Checkboxes', 'gb-query-filter' ), value: 'checkboxes' },
                                 { label: __( 'Text input', 'gb-query-filter' ), value: 'text' },
                             ],
@@ -420,6 +444,26 @@
                     )
                 );
             };
+
+            // Show "Button styles" only when a control renders as buttons or Apply is on.
+            const usesButtons =
+                ( enableCategories && categoriesControlType === 'buttons' ) ||
+                ( enableTags && tagsControlType === 'buttons' ) ||
+                ( enableExtraTaxonomies && extraTaxonomiesControlType === 'buttons' ) ||
+                ( enableMetaBoxFilter && ( metaBoxFields || [] ).some( ( f ) => f.controlType === 'buttons' ) ) ||
+                ( enableAcfFilter && ( acfFields || [] ).some( ( f ) => f.controlType === 'buttons' ) );
+
+            const classHelp = __( 'Space-separated GenerateBlocks style class names', 'gb-query-filter' );
+            const classBox = ( label, key, help ) =>
+                el( TextControl, {
+                    __next40pxDefaultSize: true,
+                    __nextHasNoMarginBottom: true,
+                    label: label,
+                    value: attributes[ key ],
+                    onChange: ( v ) => setAttributes( { [ key ]: v } ),
+                    help: help || classHelp,
+                    className: 'gbqf-control-full',
+                } );
 
             return el(
                 Fragment,
@@ -516,7 +560,8 @@
                                     className: 'gbqf-control-full',
                                 },
                                     el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filter' ) ),
-                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) )
+                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) ),
+                                    el( 'option', { value: 'buttons' }, __( 'Buttons', 'gb-query-filter' ) )
                                 )
                         ),
 
@@ -543,7 +588,8 @@
                                     className: 'gbqf-control-full',
                                 },
                                     el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filter' ) ),
-                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) )
+                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) ),
+                                    el( 'option', { value: 'buttons' }, __( 'Buttons', 'gb-query-filter' ) )
                                 )
                         ),
 
@@ -574,7 +620,8 @@
                                     className: 'gbqf-control-full',
                                 },
                                     el( 'option', { value: 'checkboxes' }, __( 'Checkboxes', 'gb-query-filter' ) ),
-                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) )
+                                    el( 'option', { value: 'select' }, __( 'Select dropdown', 'gb-query-filter' ) ),
+                                    el( 'option', { value: 'buttons' }, __( 'Buttons', 'gb-query-filter' ) )
                                 ),
                             enableExtraTaxonomies &&
                                 el(
@@ -629,6 +676,28 @@
                             } )
                         )
                     ),
+
+                    ( usesButtons || enableApplyButton ) &&
+                        el(
+                            PanelBody,
+                            { title: __( 'Button styles', 'gb-query-filter' ), initialOpen: false },
+                            usesButtons &&
+                                el(
+                                    Fragment,
+                                    null,
+                                    classBox( __( 'Button class', 'gb-query-filter' ), 'buttonClass' ),
+                                    classBox(
+                                        __( 'Active button class', 'gb-query-filter' ),
+                                        'buttonActiveClass',
+                                        __(
+                                            'Space-separated GenerateBlocks style class names. On the selected option these replace the button classes, so put any base class (e.g. gbp-button) in both boxes.',
+                                            'gb-query-filter'
+                                        )
+                                    )
+                                ),
+                            enableApplyButton && classBox( __( 'Apply button class', 'gb-query-filter' ), 'applyClass' ),
+                            classBox( __( 'Reset link class', 'gb-query-filter' ), 'resetClass' )
+                        ),
 
                     metaBoxIntegrationEnabled &&
                         el(
