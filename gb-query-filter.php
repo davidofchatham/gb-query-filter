@@ -25,6 +25,23 @@ define( 'GBQF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 // Core plugin loader.
 require_once GBQF_PLUGIN_DIR . 'includes/class-gbqf-plugin.php';
 
+/*
+ * Updates from GitHub Releases (Plugin Update Checker 5.7, vendored verbatim in
+ * libs/). REQUIRE_RELEASE_ASSETS: a release without the zip built by
+ * .github/workflows/release.yml offers no update, instead of falling back to
+ * the source zipball with its dev files. Slug must equal the plugin folder.
+ */
+require_once GBQF_PLUGIN_DIR . 'libs/plugin-update-checker/load-v5p7.php';
+
+\YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+	'https://github.com/davidofchatham/gb-query-filter/',
+	__FILE__,
+	'gb-query-filter'
+)->getVcsApi()->enableReleaseAssets(
+	'/gb-query-filter-[\d.]+\.zip/',
+	\YahnisElsts\PluginUpdateChecker\v5p7\Vcs\Api::REQUIRE_RELEASE_ASSETS
+);
+
 /**
  * Helper to access the main plugin instance.
  *

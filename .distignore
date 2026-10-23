@@ -15,4 +15,4 @@ tools
 composer.json
 composer.lock
 phpcs.xml
-vendor
+/vendor
