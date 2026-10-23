@@ -10,9 +10,13 @@
 *.log
 *.code-workspace
 CONTEXT.md
+CLAUDE.md
 docs/adr
+docs/agents
+docs/design-history
+docs/future-work.md
 tools
 composer.json
 composer.lock
 phpcs.xml
-vendor
+/vendor

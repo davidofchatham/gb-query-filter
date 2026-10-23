@@ -6,6 +6,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **In-dashboard updates from GitHub Releases.** Sites running a release build now see new versions under Dashboard → Updates, via the vendored Plugin Update Checker 5.7 (`libs/plugin-update-checker/`). Only a release carrying the `gb-query-filter-<version>.zip` built by the release workflow is offered; a bare tag offers nothing.
+
 ### Fixed
 - **Changing a filter from a later page rendered an empty loop.** The AJAX request kept the Query's pagination param (`query-{uniqueId}-page`), so narrowing results from page 3 to a set that fits on one page asked WordPress for a page that no longer exists. A filter change now removes the target Query's page key, and Reset clears it too. Other Queries' pagination on the same page is left alone.
 - **Taxonomy checkbox sets (Categories, Tags, extra taxonomies) had no group name.** Each option was announced ("GBQF Fixture, checkbox") without the set's name ("Categories"). The set is now a `role="group"` named by its visible label, the same as the Meta Box and ACF checkbox and radio groups (WCAG 1.3.1, 4.1.2).

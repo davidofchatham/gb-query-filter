@@ -1,0 +1,29 @@
+name: Committed-content guards
+
+# This is a public fork, and tracked prose accretes. Catch personal or client
+# content, and citations of private paths, at push while it is still one revert
+# away. The scripts live in tools/guards/.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Scan tracked files for PII
+        run: bash tools/guards/check-tracked-pii.sh
+
+      # A committed file citing .scratch/ resolves for one person and fails
+      # silently for everyone else. See docs/agents/issue-tracker.md.
+      - name: No committed file cites a private path
+        run: bash tools/guards/check-private-citations.sh
+
+      # Seeds a violation per guard in a throwaway repo and requires red, then
+      # requires green on a clean tree.
+      - name: Self-test, guards must fail on seeded violations
+        run: bash tools/guards/self-test-guards.sh
