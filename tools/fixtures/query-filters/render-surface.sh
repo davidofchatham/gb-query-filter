@@ -348,7 +348,7 @@ expect "${ALIAS}" "${M_LEGACY}"   4 'legacy loop untouched by class-match params
 #
 # Cheap to check here because the form is already in the body, and the a11y
 # target is a hard gate on any control this plugin renders. Not a full audit —
-# see .scratch/accessibility-audit/issues/01-baseline-wcag-audit.md.
+# see FW-3 in docs/future-work.md.
 # ---------------------------------------------------------------------------
 echo ""
 echo "6. filter form accessibility (ADR-0003, spot checks)"
@@ -373,7 +373,7 @@ esac
 # STILL SCOPED, in a different place. v3 pins both fields to `select` on purpose
 # (manifest.php `fields`). Radio/checkbox control types render a GROUP of inputs
 # with no single labellable control, which is an unfixed and separate problem —
-# see .scratch/targeting-module/issues/03-group-control-labelling.md. Nothing
+# see docs/design-history/targeting-module.md. Nothing
 # below reaches those branches, and that is deliberate, not an oversight.
 # (Numbered 5 through blueprint v1; renumbered to 6 in v2, when the class-match
 # section took 5.)
@@ -702,7 +702,7 @@ fi
 # pins the two things HTTP can see — that the fixture reproduces the stale-page
 # state, and that the server-rendered Reset href drops the key. The JS half
 # (filter change, and the narrowed Reset href) is the manual browser checklist in
-# .scratch/ajax-page-reset/issues/01-reset-page-param-on-filter-change.md.
+# docs/design-history/ajax-page-reset.md.
 # ---------------------------------------------------------------------------
 echo ""
 echo "10. pagination key (page: /${PAGING_PAGE}/)"
