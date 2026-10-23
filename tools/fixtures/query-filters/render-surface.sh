@@ -556,7 +556,7 @@ n=$(count_re "${BT}" "<label id=\"gbqf[0-9]+_cat_label\"")
     && ok 'buttons: the group has its label element' \
     || bad "buttons: group label: expected exactly 1 <label id=...>, got ${n}"
 
-n=$(count_re "${BT}" '<input type="radio" class="screen-reader-text" name="[^"]*" value="" ')
+n=$(count_re "${BT}" '<input type="radio" name="[^"]*" value="" ')
 [ "${n}" = "1" ] \
     && ok 'buttons: "Any" is a radio with value=""' \
     || bad "buttons: expected exactly 1 \"Any\" radio with value=\"\", got ${n}"
@@ -567,7 +567,7 @@ n=$(count_re "${BT}" 'gbqf-filter-buttons"[^>]*><label[^>]*><input[^>]* value=""
     && ok 'buttons: "Any" is first and checked when nothing is selected' \
     || bad "buttons: expected \"Any\" first and checked, got ${n}"
 
-n=$(count_re "${BT}" '<input type="radio" class="screen-reader-text" name="[^"]*" value="[0-9]+"')
+n=$(count_re "${BT}" '<input type="radio" name="[^"]*" value="[0-9]+"')
 [ "${n}" -gt 0 ] \
     && ok "buttons: one radio per category term (${n})" \
     || bad 'buttons: no term radios rendered'
