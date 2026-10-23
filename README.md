@@ -104,7 +104,7 @@ error.
     -   Add Meta Box fields (if Meta Box plugin is active)
     -   Add ACF fields (if ACF plugin is active)
     -   Select control types (auto, select, radio, checkboxes, buttons, text)
-    -   Style buttons and the Apply and Reset controls with GenerateBlocks classes (Button styles panel)
+    -   Style buttons and the Apply and Reset controls with GenerateBlocks classes (Button Styles panel)
     -   Enable or disable AJAX filtering
     -   Enable or disable auto-apply mode
 4.  Publish or update the page.

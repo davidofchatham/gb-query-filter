@@ -183,10 +183,6 @@ class Blocks {
 						'type'    => 'string',
 						'default' => '',
 					),
-					'buttonActiveClass'          => array(
-						'type'    => 'string',
-						'default' => '',
-					),
 					'applyClass'                 => array(
 						'type'    => 'string',
 						'default' => '',
@@ -375,12 +371,8 @@ class Blocks {
 
 		$auto_apply = ! $enable_apply;
 
-		// Author-supplied style classes. Option classes travel as one array so
-		// the three field renderers take a single extra argument.
-		$btn         = array(
-			'class'  => $this->class_tokens( isset( $attributes['buttonClass'] ) ? $attributes['buttonClass'] : '' ),
-			'active' => $this->class_tokens( isset( $attributes['buttonActiveClass'] ) ? $attributes['buttonActiveClass'] : '' ),
-		);
+		// Author-supplied style classes (sanitized token strings).
+		$btn         = $this->class_tokens( isset( $attributes['buttonClass'] ) ? $attributes['buttonClass'] : '' );
 		$apply_class = $this->class_tokens( isset( $attributes['applyClass'] ) ? $attributes['applyClass'] : '' );
 		$reset_extra = $this->class_tokens( isset( $attributes['resetClass'] ) ? $attributes['resetClass'] : '' );
 
@@ -1117,29 +1109,23 @@ class Blocks {
 	 *
 	 * Native radios inside labels (not `aria-pressed` buttons), so keyboard,
 	 * labelling and the no-JS submit come for free (ADR-0003). The group is named
-	 * by the field label whose id is `$control_id . '_label'`. The checked option
-	 * carries the active class in place of the inactive one; the sanitized pair
-	 * also rides on the group as data attributes so the frontend can re-toggle.
+	 * by the field label whose id is `$control_id . '_label'`. The option class goes
+	 * on every label; the selected look is CSS only (`:has(input:checked)`).
 	 *
 	 * @param string   $control_id Block-scoped control id; the label id derives from it.
 	 * @param string   $name       Input name.
 	 * @param string[] $choices    Option value => label, without "Any".
 	 * @param string   $selected   Selected value; '' selects "Any".
-	 * @param array    $btn        Sanitized `class` and `active` option classes.
+	 * @param string   $btn        Sanitized option class tokens.
 	 * @return string Group markup.
 	 */
 	protected function button_group( $control_id, $name, $choices, $selected, $btn ) {
-		$btn  = $btn + array(
-			'class'  => '',
-			'active' => '',
-		);
-		$html = '<div class="gbqf-filter-buttons" role="group" aria-labelledby="' . esc_attr( $control_id . '_label' )
-			. '" data-gbqf-class="' . esc_attr( $btn['class'] ) . '" data-gbqf-active-class="' . esc_attr( $btn['active'] ) . '">';
+		$html = '<div class="gbqf-filter-buttons" role="group" aria-labelledby="' . esc_attr( $control_id . '_label' ) . '">';
 
 		$choices = array( '' => __( 'Any', 'gb-query-filter' ) ) + $choices;
 		foreach ( $choices as $value => $text ) {
 			$is_checked = (string) $value === $selected;
-			$classes    = trim( 'gbqf-filter-option gbqf-filter-button ' . ( $is_checked ? $btn['active'] : $btn['class'] ) );
+			$classes    = trim( 'gbqf-filter-option gbqf-filter-button ' . $btn );
 
 			$html .= '<label class="' . esc_attr( $classes ) . '">';
 			$html .= '<input type="radio" class="screen-reader-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '" ' . checked( $is_checked, true, false ) . ' />';
@@ -1166,10 +1152,10 @@ class Blocks {
 	 * @param string $control_type  'select', 'checkboxes' or 'buttons'.
 	 * @param string $name          Input name.
 	 * @param int[]  $selected_ids  Selected term ids.
-	 * @param array  $btn           Sanitized `class` and `active` classes for `buttons`.
+	 * @param string $btn           Sanitized option class tokens for `buttons`.
 	 * @return string Field markup.
 	 */
-	protected function taxonomy_field( $field_class, $label, $control_id, $terms, $control_type, $name, $selected_ids, $btn = array() ) {
+	protected function taxonomy_field( $field_class, $label, $control_id, $terms, $control_type, $name, $selected_ids, $btn = '' ) {
 		$is_select = 'select' === $control_type;
 
 		$html  = '<div class="' . esc_attr( 'gbqf-filter-field ' . $field_class ) . '">';

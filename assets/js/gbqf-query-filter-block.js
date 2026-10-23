@@ -84,10 +84,6 @@
                 type: 'string',
                 default: '',
             },
-            buttonActiveClass: {
-                type: 'string',
-                default: '',
-            },
             applyClass: {
                 type: 'string',
                 default: '',
@@ -168,7 +164,6 @@
                 enableExtraTaxonomies,
                 enableApplyButton,
                 buttonClass,
-                buttonActiveClass,
                 applyClass,
                 resetClass,
                 extraTaxonomies,
@@ -445,7 +440,7 @@
                 );
             };
 
-            // Show "Button styles" only when a control renders as buttons or Apply is on.
+            // Show "Button Styles" only when a control renders as buttons or Apply is on.
             const usesButtons =
                 ( enableCategories && categoriesControlType === 'buttons' ) ||
                 ( enableTags && tagsControlType === 'buttons' ) ||
@@ -677,28 +672,6 @@
                         )
                     ),
 
-                    ( usesButtons || enableApplyButton ) &&
-                        el(
-                            PanelBody,
-                            { title: __( 'Button styles', 'gb-query-filter' ), initialOpen: false },
-                            usesButtons &&
-                                el(
-                                    Fragment,
-                                    null,
-                                    classBox( __( 'Button class', 'gb-query-filter' ), 'buttonClass' ),
-                                    classBox(
-                                        __( 'Active button class', 'gb-query-filter' ),
-                                        'buttonActiveClass',
-                                        __(
-                                            'Space-separated GenerateBlocks style class names. On the selected option these replace the button classes, so put any base class (e.g. gbp-button) in both boxes.',
-                                            'gb-query-filter'
-                                        )
-                                    )
-                                ),
-                            enableApplyButton && classBox( __( 'Apply button class', 'gb-query-filter' ), 'applyClass' ),
-                            classBox( __( 'Reset link class', 'gb-query-filter' ), 'resetClass' )
-                        ),
-
                     metaBoxIntegrationEnabled &&
                         el(
                             PanelBody,
@@ -795,6 +768,22 @@
                                 )
                         ),
 
+                    ( usesButtons || enableApplyButton ) &&
+                        el(
+                            PanelBody,
+                            { title: __( 'Button Styles', 'gb-query-filter' ), initialOpen: false },
+                            usesButtons &&
+                                classBox(
+                                    __( 'Button class', 'gb-query-filter' ),
+                                    'buttonClass',
+                                    __(
+                                        'Space-separated GenerateBlocks style class names. Style the selected option inside the GB style with &:has(input:checked).',
+                                        'gb-query-filter'
+                                    )
+                                ),
+                            enableApplyButton && classBox( __( 'Apply button class', 'gb-query-filter' ), 'applyClass' ),
+                            classBox( __( 'Reset link class', 'gb-query-filter' ), 'resetClass' )
+                        ),
                 ),
 
                 // BLOCK PREVIEW IN EDITOR: render front-end HTML.

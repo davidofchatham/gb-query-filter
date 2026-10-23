@@ -85,11 +85,18 @@
     cursor: pointer;
 }
 
-/* Checked state: fill AND weight, so it never rests on color alone. */
+/* Checked default look. Zero specificity, so an author class replaces it. */
 :where(.gbqf-filter-button:has(input:checked)) {
     background: var(--gbqf-button-active-bg, #1d1d1f);
     color: var(--gbqf-button-active-color, #fff);
     border-color: var(--gbqf-button-active-bg, #1d1d1f);
+}
+
+/*
+ * Checked is always bold, whatever classes the author sets: a non-color
+ * floor so selection never rests on color alone. Deliberately not in :where().
+ */
+.gbqf-query-filter-block .gbqf-filter-button:has(input:checked) {
     font-weight: 700;
 }
 
