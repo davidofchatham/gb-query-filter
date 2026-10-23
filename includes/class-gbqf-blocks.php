@@ -178,6 +178,23 @@ class Blocks {
 						'type'    => 'array',
 						'default' => array(),
 					),
+					// Space-separated GenerateBlocks style classes for the `buttons` control and actions.
+					'buttonClass'                => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'buttonActiveClass'          => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'applyClass'                 => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'resetClass'                 => array(
+						'type'    => 'string',
+						'default' => '',
+					),
 				),
 			)
 		);
@@ -357,6 +374,15 @@ class Blocks {
 		$acf_fields_attr    = ( isset( $attributes['acfFields'] ) && is_array( $attributes['acfFields'] ) ) ? $attributes['acfFields'] : array();
 
 		$auto_apply = ! $enable_apply;
+
+		// Author-supplied style classes. Option classes travel as one array so
+		// the three field renderers take a single extra argument.
+		$btn         = array(
+			'class'  => $this->class_tokens( isset( $attributes['buttonClass'] ) ? $attributes['buttonClass'] : '' ),
+			'active' => $this->class_tokens( isset( $attributes['buttonActiveClass'] ) ? $attributes['buttonActiveClass'] : '' ),
+		);
+		$apply_class = $this->class_tokens( isset( $attributes['applyClass'] ) ? $attributes['applyClass'] : '' );
+		$reset_extra = $this->class_tokens( isset( $attributes['resetClass'] ) ? $attributes['resetClass'] : '' );
 
 		wp_enqueue_script( 'gbqf-frontend' );
 		wp_enqueue_style( 'gbqf-frontend' );
@@ -791,7 +817,8 @@ class Blocks {
 				$categories,
 				$cats_control_type,
 				$name_cat,
-				$selected_cats
+				$selected_cats,
+				$btn
 			);
 		}
 
@@ -804,7 +831,8 @@ class Blocks {
 				$tags,
 				$tags_control_type,
 				$name_tag,
-				$selected_tags
+				$selected_tags,
+				$btn
 			);
 		}
 
@@ -817,7 +845,8 @@ class Blocks {
 				$data['terms'],
 				$extra_control_type,
 				sprintf( $name_tax_fmt, $slug ),
-				isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : array()
+				isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : array(),
+				$btn
 			);
 		}
 
@@ -845,7 +874,13 @@ class Blocks {
 
 				if ( $has_options && ! empty( $options ) ) {
 
-					if ( 'radio' === $control_type ) {
+					if ( 'buttons' === $control_type ) {
+						$choices = array();
+						foreach ( $options as $opt_value => $opt_label ) {
+							$choices[ (string) $opt_value ] = is_array( $opt_label ) && isset( $opt_label['label'] ) ? $opt_label['label'] : $opt_label;
+						}
+						$control .= $this->button_group( $control_id, sprintf( $name_meta_fmt, $field_id ), $choices, $selected, $btn );
+					} elseif ( 'radio' === $control_type ) {
 						$control .= '<div class="gbqf-filter-options" role="group" aria-labelledby="' . esc_attr( $control_id . '_label' ) . '">';
 						$control .= '<label class="gbqf-filter-option">';
 						$control .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_id ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
@@ -915,8 +950,22 @@ class Blocks {
 				$group_open = '<div class="gbqf-filter-options" role="group" aria-labelledby="'
 					. esc_attr( $control_id . '_label' ) . '">';
 
+				// The group renderers take one string; checkboxes' array value has no single choice.
+				$selected_one = is_array( $selected ) ? '' : (string) $selected;
+
 				// Handle true/false field with Yes/No options.
-				if ( 'true_false' === $field_type ) {
+				if ( 'true_false' === $field_type && 'buttons' === $control_type ) {
+					$control .= $this->button_group(
+						$control_id,
+						sprintf( $name_meta_fmt, $field_name ),
+						array(
+							'1' => __( 'Yes', 'gb-query-filter' ),
+							'0' => __( 'No', 'gb-query-filter' ),
+						),
+						$selected_one,
+						$btn
+					);
+				} elseif ( 'true_false' === $field_type ) {
 					$control .= $group_open;
 					$control .= '<label class="gbqf-filter-option">';
 					$control .= '<input type="radio" name="' . esc_attr( sprintf( $name_meta_fmt, $field_name ) ) . '" value="" ' . checked( $selected, '', false ) . ' />';
@@ -934,7 +983,9 @@ class Blocks {
 				} elseif ( $has_choices && ! empty( $choices ) ) {
 					// Field has predefined choices.
 
-					if ( 'checkboxes' === $control_type ) {
+					if ( 'buttons' === $control_type ) {
+						$control .= $this->button_group( $control_id, sprintf( $name_meta_fmt, $field_name ), array_map( 'strval', $choices ), $selected_one, $btn );
+					} elseif ( 'checkboxes' === $control_type ) {
 						// Multiple checkbox selections.
 						$selected_array = is_array( $selected ) ? $selected : array();
 						$control       .= $group_open;
@@ -1001,11 +1052,12 @@ class Blocks {
 		$html .= '<div class="gbqf-filter-actions">';
 
 		if ( $enable_apply ) {
-			$html .= '<button type="submit">' . esc_html__( 'Apply', 'gb-query-filter' ) . '</button>';
+			$apply_attr = '' !== $apply_class ? ' class="' . esc_attr( $apply_class ) . '"' : '';
+			$html      .= '<button type="submit"' . $apply_attr . '>' . esc_html__( 'Apply', 'gb-query-filter' ) . '</button>';
 		}
 
 		if ( $reset_url ) {
-			$reset_class = 'gbqf-filter-reset';
+			$reset_class = trim( 'gbqf-filter-reset ' . $reset_extra );
 			if ( ! $has_filters ) {
 				$reset_class .= ' is-hidden';
 			}
@@ -1040,29 +1092,97 @@ class Blocks {
 	}
 
 	/**
-	 * Render one taxonomy field: a select, or a set of checkboxes.
+	 * Reduce free text to a space-separated list of safe class tokens.
+	 *
+	 * Authors paste GenerateBlocks class names, often with the leading dot of a
+	 * selector. Each token loses that dot and goes through `sanitize_html_class`;
+	 * tokens that sanitize to nothing are dropped.
+	 *
+	 * @param mixed $value Raw attribute value.
+	 * @return string Sanitized classes, space-separated; '' when none survive.
+	 */
+	protected function class_tokens( $value ) {
+		$tokens = array();
+		foreach ( preg_split( '/\s+/', is_string( $value ) ? trim( $value ) : '', -1, PREG_SPLIT_NO_EMPTY ) as $token ) {
+			$token = sanitize_html_class( ltrim( $token, '.' ) );
+			if ( '' !== $token ) {
+				$tokens[] = $token;
+			}
+		}
+		return implode( ' ', $tokens );
+	}
+
+	/**
+	 * Render a single-select group of styled radios, with a leading "Any".
+	 *
+	 * Native radios inside labels (not `aria-pressed` buttons), so keyboard,
+	 * labelling and the no-JS submit come for free (ADR-0003). The group is named
+	 * by the field label whose id is `$control_id . '_label'`. The checked option
+	 * carries the active class in place of the inactive one; the sanitized pair
+	 * also rides on the group as data attributes so the frontend can re-toggle.
+	 *
+	 * @param string   $control_id Block-scoped control id; the label id derives from it.
+	 * @param string   $name       Input name.
+	 * @param string[] $choices    Option value => label, without "Any".
+	 * @param string   $selected   Selected value; '' selects "Any".
+	 * @param array    $btn        Sanitized `class` and `active` option classes.
+	 * @return string Group markup.
+	 */
+	protected function button_group( $control_id, $name, $choices, $selected, $btn ) {
+		$btn  = $btn + array(
+			'class'  => '',
+			'active' => '',
+		);
+		$html = '<div class="gbqf-filter-buttons" role="group" aria-labelledby="' . esc_attr( $control_id . '_label' )
+			. '" data-gbqf-class="' . esc_attr( $btn['class'] ) . '" data-gbqf-active-class="' . esc_attr( $btn['active'] ) . '">';
+
+		$choices = array( '' => __( 'Any', 'gb-query-filter' ) ) + $choices;
+		foreach ( $choices as $value => $text ) {
+			$is_checked = (string) $value === $selected;
+			$classes    = trim( 'gbqf-filter-option gbqf-filter-button ' . ( $is_checked ? $btn['active'] : $btn['class'] ) );
+
+			$html .= '<label class="' . esc_attr( $classes ) . '">';
+			$html .= '<input type="radio" class="screen-reader-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '" ' . checked( $is_checked, true, false ) . ' />';
+			$html .= '<span>' . esc_html( $text ) . '</span>';
+			$html .= '</label>';
+		}
+
+		return $html . '</div>';
+	}
+
+	/**
+	 * Render one taxonomy field: a select, a set of checkboxes, or a button group.
 	 *
 	 * A select is one control, so its label points at it with `for`. A checkbox set
-	 * is a group of inputs with no single control to point at, so the label gets an
-	 * `id` and the wrapper is a `role="group"` named by it (ADR-0003). `$control_id`
-	 * is the select's id and the stem of every checkbox id and of the label id.
+	 * or button group is a group of inputs with no single control to point at, so
+	 * the label gets an `id` and the wrapper is a `role="group"` named by it
+	 * (ADR-0003). `$control_id` is the select's id and the stem of every checkbox
+	 * id and of the label id.
 	 *
 	 * @param string $field_class   Classes after `gbqf-filter-field` on the wrapper.
 	 * @param string $label         Visible label text.
 	 * @param string $control_id    Block-scoped control id, unique per block.
 	 * @param array  $terms         WP_Term objects.
-	 * @param string $control_type  'select' or 'checkboxes'.
+	 * @param string $control_type  'select', 'checkboxes' or 'buttons'.
 	 * @param string $name          Input name.
 	 * @param int[]  $selected_ids  Selected term ids.
+	 * @param array  $btn           Sanitized `class` and `active` classes for `buttons`.
 	 * @return string Field markup.
 	 */
-	protected function taxonomy_field( $field_class, $label, $control_id, $terms, $control_type, $name, $selected_ids ) {
+	protected function taxonomy_field( $field_class, $label, $control_id, $terms, $control_type, $name, $selected_ids, $btn = array() ) {
 		$is_select = 'select' === $control_type;
 
 		$html  = '<div class="' . esc_attr( 'gbqf-filter-field ' . $field_class ) . '">';
 		$html .= $this->field_label( $label, $control_id, $is_select ? $control_id : '' );
 
-		if ( $is_select ) {
+		if ( 'buttons' === $control_type ) {
+			// Single-select: the first id in the URL is the one shown as active.
+			$choices = array();
+			foreach ( $terms as $term ) {
+				$choices[ (string) (int) $term->term_id ] = $term->name;
+			}
+			$html .= $this->button_group( $control_id, $name, $choices, empty( $selected_ids ) ? '' : (string) reset( $selected_ids ), $btn );
+		} elseif ( $is_select ) {
 			$html .= '<select id="' . esc_attr( $control_id ) . '" name="' . esc_attr( $name ) . '">';
 			$html .= '<option value="">' . esc_html__( 'Any', 'gb-query-filter' ) . '</option>';
 			foreach ( $terms as $term ) {

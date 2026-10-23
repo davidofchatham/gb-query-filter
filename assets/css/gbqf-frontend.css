@@ -50,11 +50,69 @@
     gap: 6px;
 }
 
-.gbqf-query-filter-block .gbqf-filter-option {
+.gbqf-query-filter-block .gbqf-filter-option:not(.gbqf-filter-button) {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 14px;
+}
+
+/*
+ * `buttons` control. Everything is wrapped in :where() so it has zero
+ * specificity: any GenerateBlocks class an author sets on the options wins.
+ * Colors come from --gbqf-* custom properties with neutral fallbacks.
+ */
+:where(.gbqf-filter-buttons) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+:where(.gbqf-filter-button) {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--gbqf-button-border, #5c5f62);
+    border-radius: var(--gbqf-button-radius, 4px);
+    background: var(--gbqf-button-bg, #fff);
+    color: var(--gbqf-button-color, #1d1d1f);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Checked state: fill AND weight, so it never rests on color alone. */
+:where(.gbqf-filter-button:has(input:checked)) {
+    background: var(--gbqf-button-active-bg, #1d1d1f);
+    color: var(--gbqf-button-active-color, #fff);
+    border-color: var(--gbqf-button-active-bg, #1d1d1f);
+    font-weight: 700;
+}
+
+/* Focus lands on the hidden radio, so draw the ring on its label. */
+:where(.gbqf-filter-button:has(:focus-visible)) {
+    outline: 2px solid var(--gbqf-focus-color, #0b57d0);
+    outline-offset: 2px;
+}
+
+/*
+ * Keep the radio visually hidden even where a theme restyles
+ * `.screen-reader-text:focus` into a visible box (core does, with !important).
+ */
+.gbqf-query-filter-block .gbqf-filter-button input[type="radio"] {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    clip-path: inset(50%) !important;
+    border: 0 !important;
 }
 
 .gbqf-filter-actions {
