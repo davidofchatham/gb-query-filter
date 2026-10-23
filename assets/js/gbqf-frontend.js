@@ -247,6 +247,27 @@
                 form.addEventListener('submit', ajaxSubmit);
             }
 
+            // Buttons control: swap the inactive/active class sets (data attributes,
+            // already sanitized by PHP) on every label of the group. Independent of
+            // auto-apply; a reload re-renders the server-side state.
+            if (form) {
+                form.querySelectorAll('.gbqf-filter-buttons').forEach(function (group) {
+                    var tokens = function (attr) {
+                        return (group.getAttribute(attr) || '').split(/\s+/).filter(Boolean);
+                    };
+                    var inactive = tokens('data-gbqf-class');
+                    var active = tokens('data-gbqf-active-class');
+
+                    group.addEventListener('change', function () {
+                        group.querySelectorAll('label').forEach(function (label) {
+                            var input = label.querySelector('input');
+                            inactive.concat(active).forEach(function (cls) { label.classList.remove(cls); });
+                            (input && input.checked ? active : inactive).forEach(function (cls) { label.classList.add(cls); });
+                        });
+                    });
+                });
+            }
+
             if (autoApply) {
                 if (!form) {
                     return;
