@@ -100,26 +100,30 @@
     font-weight: 700;
 }
 
-/* Focus lands on the hidden radio, so draw the ring on its label. */
-:where(.gbqf-filter-button:has(:focus-visible)) {
+/*
+ * Focus lands on the hidden radio, so draw the ring on its label. Like the bold
+ * rule above, deliberately not in :where(): an author class with `outline: 0`
+ * must not remove keyboard focus (ADR-0003).
+ */
+.gbqf-query-filter-block .gbqf-filter-button:has(:focus-visible) {
     outline: 2px solid var(--gbqf-focus-color, #0b57d0);
     outline-offset: 2px;
 }
 
 /*
- * Keep the radio visually hidden even where a theme restyles
- * `.screen-reader-text:focus` into a visible box (core does, with !important).
+ * Visually hide the radio but keep it focusable and in the accessibility tree
+ * (no display:none or visibility:hidden).
  */
 .gbqf-query-filter-block .gbqf-filter-button input[type="radio"] {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    margin: -1px !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    clip-path: inset(50%) !important;
-    border: 0 !important;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    border: 0;
 }
 
 .gbqf-filter-actions {
@@ -129,7 +133,8 @@
     grid-column: 1 / -1;
 }
 
-.gbqf-filter-actions .gbqf-filter-reset {
+/* :where() so a single applyClass / resetClass author class wins. */
+:where(.gbqf-filter-actions .gbqf-filter-reset) {
     font-size: 14px;
 }
 
@@ -162,7 +167,7 @@
         align-items: stretch;
     }
 
-    .gbqf-filter-actions button[type="submit"] {
+    :where(.gbqf-filter-actions button[type="submit"]) {
         width: 100%;
         text-align: center;
     }

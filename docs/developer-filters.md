@@ -22,7 +22,7 @@ Query Loop blocks can override global settings (Query Loop block → Advanced �
 
 ## Button Controls and Style Classes
 
-The `buttons` control type renders a single-select group of styled buttons with a leading "Any" (`value=""`) that clears the field. It is offered for Categories, Tags and extra taxonomies, and in the per-field control override for Meta Box and ACF fields that have choices (an ACF true/false field renders Yes/No). The markup is a `role="group"` of `<label class="gbqf-filter-option">` elements wrapping native radios, so the form values and URL parameters match the `select` control.
+The `buttons` control type renders a single-select group of styled buttons with a leading "Any" (`value=""`) that clears the field. It is offered for Categories, Tags and extra taxonomies, and in the per-field control override for Meta Box and ACF fields that have choices (an ACF true/false field renders Yes/No). The markup is a `role="group"` of `<label class="gbqf-filter-option gbqf-filter-button …">` elements (plus the `buttonClass` tokens) wrapping native radios, so the form values and URL parameters match the `select` control.
 
 Three block attributes, shared by every control in the block, take space-separated class names (for example GenerateBlocks global-style classes):
 
@@ -34,9 +34,9 @@ Three block attributes, shared by every control in the block, take space-separat
 
 Each token is stripped of a leading `.` and passed through `sanitize_html_class()`, so `.gbp-button--primary` and `gbp-button--primary` are equivalent. The selected option is styled by CSS alone, on the label containing the checked radio, so it works with or without Apply, AJAX or JavaScript. To give it an author look, nest `&:has(input:checked) { … }` inside the GenerateBlocks style that carries `buttonClass`. The checked option is always bold regardless of classes (a non-color floor, deliberately outside `:where()`).
 
-Default styling is wrapped in `:where()` (zero specificity), so any author class overrides it. With the class attributes empty, the plugin's own button look applies in full.
+Default styling is wrapped in `:where()` (zero specificity), so any author class overrides it. With the class attributes empty, the plugin's own button look applies in full. The Apply and Reset default rules are wrapped the same way, so `applyClass` and `resetClass` win too.
 
-Keyboard focus lands on the visually hidden radio, so an author class's own `:focus` effect does not fire; the plugin draws its focus outline on the label instead.
+The radios are not given the `screen-reader-text` class. One plugin rule hides them visually while they stay focusable and in the accessibility tree. Keyboard focus lands on the hidden radio, so an author class's own `:focus` effect does not fire; the plugin draws its focus outline on the label instead. That outline is deliberately outside `:where()`, so an author class with `outline: 0` cannot remove keyboard focus.
 
 ## Query Argument Merging
 
