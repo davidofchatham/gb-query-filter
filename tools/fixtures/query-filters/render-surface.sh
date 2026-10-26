@@ -603,6 +603,55 @@ n=$(count_re "${BT}" '<evil|<x>|evil"')
 
 check_refs "${BT}" 'buttons page'
 
+# v7. The `taxonomies` attribute, on its own page (blueprint v7): one filter
+# block whose list is [post_tag select, category buttons, an unregistered slug,
+# category again], with the LEGACY attributes seeded to contradict it
+# (categories and tags on, as checkbox sets).
+#
+# Each assertion pins one rule and would fail differently if that rule broke:
+# order is the list's (tags first; the legacy order is categories first),
+# control type is per taxonomy, the bad entries are dropped, and the legacy
+# attributes are ignored once the list exists (any checkbox set means the
+# fallback fired).
+TL_PAGE='gbqf-taxlist'
+TL=$(fetch '' "${TL_PAGE}" || true)
+[ -n "${TL}" ] || err "empty response for /${TL_PAGE}/ — reseed the blueprint (v7+)."
+
+echo ""
+echo "   taxonomies attribute (page: /${TL_PAGE}/)"
+
+order=$(printf '%s' "${TL}" | grep -o -E 'class="gbqf-filter-field gbqf-filter-(tags|categories)"' | sed -E 's/.*gbqf-filter-//; s/"//' | tr '\n' ' ')
+[ "${order}" = 'tags categories ' ] \
+    && ok 'taxonomies: rendered in list order (tags, then categories)' \
+    || bad "taxonomies: expected order \"tags categories \", got \"${order}\""
+
+n=$(count_re "${TL}" '<select id="gbqf[0-9]+_tag"')
+[ "${n}" = 1 ] \
+    && ok 'taxonomies: tags rendered as a select (per-taxonomy control type)' \
+    || bad "taxonomies: expected 1 tags select, got ${n}"
+
+n=$(count_re "${TL}" 'gbqf-filter-buttons" role="group" aria-labelledby="gbqf[0-9]+_cat_label"')
+[ "${n}" = 1 ] \
+    && ok 'taxonomies: categories rendered as a buttons group' \
+    || bad "taxonomies: expected 1 categories buttons group, got ${n}"
+
+n=$(count_re "${TL}" 'gbqf-filter-field gbqf-filter-categories"')
+[ "${n}" = 1 ] \
+    && ok 'taxonomies: a repeated slug renders one field' \
+    || bad "taxonomies: expected exactly 1 categories field, got ${n}"
+
+n=$(count_re "${TL}" 'gbqf-no-such-taxonomy|gbqf-filter-tax ')
+[ "${n}" = 0 ] \
+    && ok 'taxonomies: an unregistered slug renders nothing' \
+    || bad "taxonomies: ${n} fragment(s) from an unregistered taxonomy"
+
+n=$(count_re "${TL}" '<input type="checkbox"')
+[ "${n}" = 0 ] \
+    && ok 'taxonomies: legacy attributes ignored once the list exists (no checkbox set)' \
+    || bad "taxonomies: ${n} checkbox(es) — the legacy fallback fired although \`taxonomies\` is present"
+
+check_refs "${TL}" 'taxonomy-list page'
+
 # ---------------------------------------------------------------------------
 # 7. Meta Box field filter through an ID-matched target. (blueprint v3)
 #
