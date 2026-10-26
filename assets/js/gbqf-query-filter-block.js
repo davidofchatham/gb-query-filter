@@ -351,6 +351,12 @@
                 default: true,
             },
 
+            // Hide the visible search label (it stays for screen readers).
+            hideSearchLabel: {
+                type: 'boolean',
+                default: false,
+            },
+
             // Taxonomy filters: [ { slug, controlType } ]. No default on purpose: absent
             // means a block saved before this attribute existed, which the legacy
             // attributes below still describe.
@@ -456,6 +462,7 @@
             const {
                 targetId,
                 enableSearch,
+                hideSearchLabel,
                 taxonomies,
                 enableCategories,
                 enableTags,
@@ -798,6 +805,13 @@
                             checked: enableSearch,
                             onChange: ( checked ) => setAttributes( { enableSearch: checked } ),
                             help: __( 'A text box that searches post titles and content.', 'gb-query-filter' ),
+                        } ),
+                        enableSearch && el( ToggleControl, {
+                            __nextHasNoMarginBottom: true,
+                            label: __( 'Hide search label', 'gb-query-filter' ),
+                            checked: !! hideSearchLabel,
+                            onChange: ( checked ) => setAttributes( { hideSearchLabel: checked } ),
+                            help: __( 'Shows "Search" as placeholder text instead of a visible label. Screen readers still announce the label. The placeholder must have 4.5:1 contrast on its background; your theme controls that.', 'gb-query-filter' ),
                         } )
                     ),
 

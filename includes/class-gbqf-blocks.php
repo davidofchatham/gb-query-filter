@@ -109,6 +109,10 @@ class Blocks {
 						'type'    => 'boolean',
 						'default' => true,
 					),
+					'hideSearchLabel'            => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
 					'enableCategories'           => array(
 						'type'    => 'boolean',
 						'default' => false,
@@ -362,6 +366,7 @@ class Blocks {
 		$params    = new \GBQF\Params( $target_id );
 
 		$enable_search     = array_key_exists( 'enableSearch', $attributes ) ? (bool) $attributes['enableSearch'] : true;
+		$hide_search_label = ! empty( $attributes['hideSearchLabel'] );
 		$enable_ajax       = array_key_exists( 'enableAjax', $attributes ) ? (bool) $attributes['enableAjax'] : true;
 		$enable_apply      = array_key_exists( 'enableApplyButton', $attributes ) ? (bool) $attributes['enableApplyButton'] : false;
 		$enable_mb_filter  = array_key_exists( 'enableMetaBoxFilter', $attributes ) ? (bool) $attributes['enableMetaBoxFilter'] : false;
@@ -746,9 +751,17 @@ class Blocks {
 		// Search field.
 		if ( $enable_search ) {
 			$html .= '<div class="gbqf-filter-field gbqf-filter-search">';
-			// Label visually hidden, placeholder provides prompt.
-			$html .= '<label for="' . esc_attr( $cid . 'search_input' ) . '" class="screen-reader-text">' . esc_html__( 'Search', 'gb-query-filter' ) . '</label>';
-			$html .= '<input type="text" id="' . esc_attr( $cid . 'search_input' ) . '" name="' . esc_attr( $name_search ) . '" value="' . esc_attr( $current_search ) . '" placeholder="' . esc_attr__( 'Search', 'gb-query-filter' ) . '" />';
+			// The label is visible unless the author opts out (ADR-0003): a placeholder alone
+			// vanishes on typing. A hidden label keeps the placeholder as its visible prompt.
+			$search_id = $cid . 'search_input';
+			if ( $hide_search_label ) {
+				$html       .= '<label for="' . esc_attr( $search_id ) . '" class="screen-reader-text">' . esc_html__( 'Search', 'gb-query-filter' ) . '</label>';
+				$placeholder = ' placeholder="' . esc_attr__( 'Search', 'gb-query-filter' ) . '"';
+			} else {
+				$html       .= $this->field_label( __( 'Search', 'gb-query-filter' ), $search_id, $search_id );
+				$placeholder = '';
+			}
+			$html .= '<input type="text" id="' . esc_attr( $search_id ) . '" name="' . esc_attr( $name_search ) . '" value="' . esc_attr( $current_search ) . '"' . $placeholder . ' />';
 			$html .= '</div>';
 		}
 
