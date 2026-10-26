@@ -4,6 +4,18 @@ All notable changes to GB Query Filter are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+### Changed
+- **Editor sidebar reorganized into parallel groups: Search, Taxonomies, Custom Fields and Result Updates.** Taxonomies are one list, Categories and Tags included, each with its own control type, chosen from every public taxonomy through a searchable combobox paired with an Add button. Custom Fields merges Meta Box and ACF into one list: pick a field from the discovered fields instead of typing its name, and a field whose source no longer exists is flagged for removal. The source (Meta Box or ACF) is shown only when both integrations supply fields. A long field list shows the first 25 immediately, searches the whole set as you type and loads more on scroll. Result Updates replaces the two stacked toggles with a "When *Apply* is clicked / Immediately on selection" choice, an AJAX toggle and a plain-language summary of the combination.
+- A taxonomy list is now stored in a new `taxonomies` block attribute (`[ { slug, controlType } ]`). Blocks saved earlier keep rendering from `enableCategories`, `enableTags` and `extraTaxonomies` until they are next edited, then use the new attribute; their front-end markup and URL parameters are unchanged. Taxonomy order now follows the order in the list, and Categories and Tags are labeled by their registered taxonomy label.
+- A newly inserted block starts with every filter off, search included, and with AJAX updates off, instead of with search on. Existing blocks are unaffected.
+- Taxonomy filters for Categories and Tags are labeled from the taxonomy's registered label (core's "Categories" and "Tags", including translations and relabeling) instead of fixed strings. The markup is otherwise unchanged.
+- Adding a custom field in the editor drops any fields still stored behind a switched-off Meta Box or ACF filter, which the new sidebar cannot show and the front end was not rendering. Panels open on load only when they hold something or are set away from their defaults.
+- ACF layout-only fields (`tab`, `message`, `accordion`) are no longer offered in the editor's field list.
+
+### Fixed
+- **The editor's AJAX toggle disagreed with the front end.** The editor defaulted `enableAjax` to off while the PHP registration defaulted it to on, so a block with AJAX switched off omitted the attribute and rendered with AJAX on. The editor default now matches, so blocks show what visitors get; no front-end behavior changes.
+- The control-type dropdowns for Categories, Tags and Additional taxonomies were bare `<select>` elements whose `<label>` had no `for`, so none had an accessible name. They are now labeled `SelectControl`s (WCAG 1.3.1, 4.1.2).
+
 ## [0.5.0] — 2026-10-23
 
 ### Added
