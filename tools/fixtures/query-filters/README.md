@@ -61,9 +61,13 @@ A third page, `/gbqf-buttons/`, carries one filter block and no loop: Categories
 
 A fourth page, `/gbqf-taxlist/`, carries one filter block and no loop, driven by the `taxonomies` attribute: `[post_tag select, category buttons, an unregistered slug, category again]`, with the legacy attributes seeded to contradict it (categories and tags on, as checkbox sets). §6 reads the rendered form for the four rules the list adds: display order is the list's (tags before categories; the legacy order is the reverse), control type is per taxonomy, the unregistered and repeated entries render nothing extra, and the legacy attributes are ignored once the list exists (any checkbox set means the fallback fired). Blocks saved before the attribute existed take the legacy path, which pages `taxonomy` and `buttons` still exercise.
 
+### Search-label page (v8)
+
+A fifth page, `/gbqf-searchlabel/`, carries two search-only filter blocks and no loop: one leaves `hideSearchLabel` unset (which is also what a block saved before the attribute looks like), the other sets it. §6 counts each shape across the page: one visible `gbqf-filter-label` "Search" label, one `screen-reader-text` label, no placeholder after a visible label, and the placeholder kept after the hidden one. Counting across the page means a visible-label block that kept its placeholder fails as a second placeholder instead of hiding behind the opt-out block. Written first against the old markup, it failed 3 of its 5 assertions (the "no placeholder after a visible label" check passes vacuously until a visible label exists).
+
 ## Current result
 
-**92 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v7, against the `feat/sidebar-redesign` branch (the `taxonomies` attribute). Through v6, 84 passed against the `feat/button-filters` branch (the `buttons` control). Through v5, 72 passed on 0.4.0 plus the pagination-key fix and the taxonomy labeling fix (14 of the 72 fail against the pre-fix markup).
+**98 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v8, against the `fix/search-label-contrast` branch (the visible search label). Through v7, 92 passed against the `feat/sidebar-redesign` branch (the `taxonomies` attribute). Through v6, 84 passed against the `feat/button-filters` branch (the `buttons` control). Through v5, 72 passed on 0.4.0 plus the pagination-key fix and the taxonomy labeling fix (14 of the 72 fail against the pre-fix markup).
 
 ## What it caught
 
