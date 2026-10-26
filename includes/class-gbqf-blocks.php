@@ -59,15 +59,7 @@ class Blocks {
 			true
 		);
 
-		// Provide public taxonomies (excluding category/post_tag) to the editor.
-		$tax_objects = get_taxonomies(
-			array(
-				'public'   => true,
-				'_builtin' => false,
-			),
-			'objects'
-		);
-		// Also include public built-in taxonomies, then filter out category/post_tag.
+		// Provide every public taxonomy (built-in ones first, category and post_tag included) to the editor.
 		$tax_objects = array_merge(
 			get_taxonomies(
 				array(
@@ -76,14 +68,17 @@ class Blocks {
 				),
 				'objects'
 			),
-			$tax_objects
+			get_taxonomies(
+				array(
+					'public'   => true,
+					'_builtin' => false,
+				),
+				'objects'
+			)
 		);
 
 		$taxonomies_for_editor = array();
 		foreach ( $tax_objects as $slug => $tax_obj ) {
-			if ( in_array( $slug, array( 'category', 'post_tag' ), true ) ) {
-				continue;
-			}
 			$label                   = isset( $tax_obj->labels->name ) ? $tax_obj->labels->name : $slug;
 			$taxonomies_for_editor[] = array(
 				'slug'  => $slug,
@@ -150,6 +145,12 @@ class Blocks {
 						'type'    => 'string',
 						'default' => '',
 					),
+					// Taxonomy filters: [ { slug, controlType } ]. No default on purpose: absent means a
+					// block saved before this attribute existed, which falls back to the legacy
+					// enableCategories / enableTags / extraTaxonomies attributes above.
+					'taxonomies'                 => array(
+						'type' => 'array',
+					),
 					'enableMetaBoxFilter'        => array(
 						'type'    => 'boolean',
 						'default' => false,
@@ -208,6 +209,12 @@ class Blocks {
 		wp_add_inline_script(
 			'gbqf-query-filter-block',
 			'window.GBQF_ENABLE_ACF = ' . ( $acf_enabled ? 'true' : 'false' ) . ';',
+			'before'
+		);
+
+		wp_add_inline_script(
+			'gbqf-query-filter-block',
+			'window.GBQF_SETTINGS_URL = ' . wp_json_encode( admin_url( 'admin.php?page=gb-query-filter' ) ) . ';',
 			'before'
 		);
 	}
@@ -300,7 +307,8 @@ class Blocks {
 
 		wp_add_inline_script(
 			'gbqf-query-filter-block',
-			'window.GBQF_META_FIELDS = ' . wp_json_encode( $mb_fields_for_editor ) . ';',
+			// A field name used in two groups is one meta key; the picker lists it once.
+			'window.GBQF_META_FIELDS = ' . wp_json_encode( array_values( array_column( $mb_fields_for_editor, null, 'id' ) ) ) . ';',
 			'before'
 		);
 
@@ -318,7 +326,8 @@ class Blocks {
 					$fields = acf_get_fields( $group['key'] );
 					if ( is_array( $fields ) && ! empty( $fields ) ) {
 						foreach ( $fields as $field ) {
-							if ( empty( $field['name'] ) ) {
+							// Layout-only fields hold no value to filter on.
+							if ( empty( $field['name'] ) || in_array( $field['type'] ?? '', array( 'tab', 'message', 'accordion' ), true ) ) {
 								continue;
 							}
 							$acf_fields_for_editor[] = array(
@@ -335,7 +344,7 @@ class Blocks {
 
 		wp_add_inline_script(
 			'gbqf-query-filter-block',
-			'window.GBQF_ACF_FIELDS = ' . wp_json_encode( $acf_fields_for_editor ) . ';',
+			'window.GBQF_ACF_FIELDS = ' . wp_json_encode( array_values( array_column( $acf_fields_for_editor, null, 'name' ) ) ) . ';',
 			'before'
 		);
 	}
@@ -352,22 +361,15 @@ class Blocks {
 		$target_id = isset( $attributes['targetId'] ) ? sanitize_key( $attributes['targetId'] ) : '';
 		$params    = new \GBQF\Params( $target_id );
 
-		$enable_search      = array_key_exists( 'enableSearch', $attributes ) ? (bool) $attributes['enableSearch'] : true;
-		$enable_categories  = array_key_exists( 'enableCategories', $attributes ) ? (bool) $attributes['enableCategories'] : true;
-		$enable_tags        = array_key_exists( 'enableTags', $attributes ) ? (bool) $attributes['enableTags'] : true;
-		$cats_control_type  = isset( $attributes['categoriesControlType'] ) ? $attributes['categoriesControlType'] : 'checkboxes';
-		$tags_control_type  = isset( $attributes['tagsControlType'] ) ? $attributes['tagsControlType'] : 'checkboxes';
-		$extra_control_type = isset( $attributes['extraTaxonomiesControlType'] ) ? $attributes['extraTaxonomiesControlType'] : 'checkboxes';
-		$enable_ajax        = array_key_exists( 'enableAjax', $attributes ) ? (bool) $attributes['enableAjax'] : true;
-		$enable_extra_tax   = array_key_exists( 'enableExtraTaxonomies', $attributes ) ? (bool) $attributes['enableExtraTaxonomies'] : false;
-		$enable_apply       = array_key_exists( 'enableApplyButton', $attributes ) ? (bool) $attributes['enableApplyButton'] : false;
-		$extra_taxonomies   = isset( $attributes['extraTaxonomies'] ) ? (string) $attributes['extraTaxonomies'] : '';
-		$enable_mb_filter   = array_key_exists( 'enableMetaBoxFilter', $attributes ) ? (bool) $attributes['enableMetaBoxFilter'] : false;
-		$mb_field_ids_raw   = isset( $attributes['metaBoxFieldId'] ) ? (string) $attributes['metaBoxFieldId'] : '';
-		$mb_fields_attr     = ( isset( $attributes['metaBoxFields'] ) && is_array( $attributes['metaBoxFields'] ) ) ? $attributes['metaBoxFields'] : array();
-		$enable_acf_filter  = array_key_exists( 'enableAcfFilter', $attributes ) ? (bool) $attributes['enableAcfFilter'] : false;
-		$acf_field_ids_raw  = isset( $attributes['acfFieldId'] ) ? (string) $attributes['acfFieldId'] : '';
-		$acf_fields_attr    = ( isset( $attributes['acfFields'] ) && is_array( $attributes['acfFields'] ) ) ? $attributes['acfFields'] : array();
+		$enable_search     = array_key_exists( 'enableSearch', $attributes ) ? (bool) $attributes['enableSearch'] : true;
+		$enable_ajax       = array_key_exists( 'enableAjax', $attributes ) ? (bool) $attributes['enableAjax'] : true;
+		$enable_apply      = array_key_exists( 'enableApplyButton', $attributes ) ? (bool) $attributes['enableApplyButton'] : false;
+		$enable_mb_filter  = array_key_exists( 'enableMetaBoxFilter', $attributes ) ? (bool) $attributes['enableMetaBoxFilter'] : false;
+		$mb_field_ids_raw  = isset( $attributes['metaBoxFieldId'] ) ? (string) $attributes['metaBoxFieldId'] : '';
+		$mb_fields_attr    = ( isset( $attributes['metaBoxFields'] ) && is_array( $attributes['metaBoxFields'] ) ) ? $attributes['metaBoxFields'] : array();
+		$enable_acf_filter = array_key_exists( 'enableAcfFilter', $attributes ) ? (bool) $attributes['enableAcfFilter'] : false;
+		$acf_field_ids_raw = isset( $attributes['acfFieldId'] ) ? (string) $attributes['acfFieldId'] : '';
+		$acf_fields_attr   = ( isset( $attributes['acfFields'] ) && is_array( $attributes['acfFields'] ) ) ? $attributes['acfFields'] : array();
 
 		$auto_apply = ! $enable_apply;
 
@@ -579,60 +581,9 @@ class Blocks {
 		// -----------------------
 		// TAXONOMY TERMS
 		// -----------------------
-		$categories = array();
-		if ( $enable_categories ) {
-			$categories = get_terms(
-				array(
-					'taxonomy'   => 'category',
-					'hide_empty' => true,
-				)
-			);
-			if ( is_wp_error( $categories ) ) {
-				$categories = array();
-			}
-		}
-
-		$tags = array();
-		if ( $enable_tags ) {
-			$tags = get_terms(
-				array(
-					'taxonomy'   => 'post_tag',
-					'hide_empty' => true,
-				)
-			);
-			if ( is_wp_error( $tags ) ) {
-				$tags = array();
-			}
-		}
-
-		// Parse extra taxonomies string into valid slugs.
-		$extra_tax_slugs = array();
-		if ( $enable_extra_tax && '' !== trim( $extra_taxonomies ) ) {
-			$parts = explode( ',', $extra_taxonomies );
-			foreach ( $parts as $slug ) {
-				$slug = trim( strtolower( $slug ) );
-				if ( '' === $slug ) {
-					continue;
-				}
-				if ( in_array( $slug, array( 'category', 'post_tag' ), true ) ) {
-					continue;
-				}
-				if ( ! taxonomy_exists( $slug ) ) {
-					continue;
-				}
-				if ( ! in_array( $slug, $extra_tax_slugs, true ) ) {
-					$extra_tax_slugs[] = $slug;
-				}
-			}
-		}
-
-		// Preload extra taxonomy objects and terms.
-		$extra_taxonomies_data = array();
-		foreach ( $extra_tax_slugs as $slug ) {
-			$tax_obj = get_taxonomy( $slug );
-			if ( ! $tax_obj ) {
-				continue;
-			}
+		// Preload each configured taxonomy's terms; one with none is not rendered.
+		$taxonomies_data = array();
+		foreach ( $this->effective_taxonomies( $attributes ) as $slug => $control_type ) {
 			$terms = get_terms(
 				array(
 					'taxonomy'   => $slug,
@@ -643,9 +594,10 @@ class Blocks {
 				continue;
 			}
 
-			$extra_taxonomies_data[ $slug ] = array(
-				'object' => $tax_obj,
-				'terms'  => $terms,
+			$taxonomies_data[ $slug ] = array(
+				'label'        => get_taxonomy( $slug )->labels->name ?? $slug,
+				'terms'        => $terms,
+				'control_type' => $control_type,
 			);
 		}
 
@@ -800,44 +752,34 @@ class Blocks {
 			$html .= '</div>';
 		}
 
-		// Categories field.
-		if ( $enable_categories && ! empty( $categories ) ) {
-			$html .= $this->taxonomy_field(
-				'gbqf-filter-categories',
-				__( 'Categories', 'gb-query-filter' ),
-				$cid . 'cat',
-				$categories,
-				$cats_control_type,
-				$name_cat,
-				$selected_cats,
-				$button_class
-			);
-		}
+		// Taxonomies, in the order the author listed them. Categories and tags keep their own
+		// URL params, classes and ids; every other taxonomy goes through the `tax` namespace.
+		foreach ( $taxonomies_data as $slug => $data ) {
+			if ( 'category' === $slug ) {
+				$field_class = 'gbqf-filter-categories';
+				$control_id  = $cid . 'cat';
+				$name        = $name_cat;
+				$selected    = $selected_cats;
+			} elseif ( 'post_tag' === $slug ) {
+				$field_class = 'gbqf-filter-tags';
+				$control_id  = $cid . 'tag';
+				$name        = $name_tag;
+				$selected    = $selected_tags;
+			} else {
+				$field_class = 'gbqf-filter-tax gbqf-filter-tax-' . $slug;
+				$control_id  = $cid . 'tax_' . $slug;
+				$name        = sprintf( $name_tax_fmt, $slug );
+				$selected    = isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : array();
+			}
 
-		// Tags field.
-		if ( $enable_tags && ! empty( $tags ) ) {
 			$html .= $this->taxonomy_field(
-				'gbqf-filter-tags',
-				__( 'Tags', 'gb-query-filter' ),
-				$cid . 'tag',
-				$tags,
-				$tags_control_type,
-				$name_tag,
-				$selected_tags,
-				$button_class
-			);
-		}
-
-		// Extra taxonomies.
-		foreach ( $extra_taxonomies_data as $slug => $data ) {
-			$html .= $this->taxonomy_field(
-				'gbqf-filter-tax gbqf-filter-tax-' . $slug,
-				$data['object']->labels->name ?? $slug,
-				$cid . 'tax_' . $slug,
+				$field_class,
+				$data['label'],
+				$control_id,
 				$data['terms'],
-				$extra_control_type,
-				sprintf( $name_tax_fmt, $slug ),
-				isset( $selected_extra[ $slug ] ) ? (array) $selected_extra[ $slug ] : array(),
+				$data['control_type'],
+				$name,
+				$selected,
 				$button_class
 			);
 		}
@@ -1065,6 +1007,62 @@ class Blocks {
 		$html .= '</div>';
 
 		return $html;
+	}
+
+	/**
+	 * Resolve the block's taxonomy filters to slug => control type, in display order.
+	 *
+	 * Reads the `taxonomies` attribute when present. A block saved before it existed has
+	 * only the legacy enableCategories / enableTags / enableExtraTaxonomies attributes, and
+	 * those map onto the same list (categories, tags, then extras), so old content renders
+	 * unchanged. Unknown taxonomies, duplicates and unknown control types are dropped.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string[] Taxonomy slug => 'checkboxes' | 'select' | 'buttons'.
+	 */
+	protected function effective_taxonomies( $attributes ) {
+		if ( isset( $attributes['taxonomies'] ) && is_array( $attributes['taxonomies'] ) ) {
+			$entries = $attributes['taxonomies'];
+		} else {
+			$entries = array();
+			if ( ! empty( $attributes['enableCategories'] ) ) {
+				$entries[] = array(
+					'slug'        => 'category',
+					'controlType' => isset( $attributes['categoriesControlType'] ) ? $attributes['categoriesControlType'] : '',
+				);
+			}
+			if ( ! empty( $attributes['enableTags'] ) ) {
+				$entries[] = array(
+					'slug'        => 'post_tag',
+					'controlType' => isset( $attributes['tagsControlType'] ) ? $attributes['tagsControlType'] : '',
+				);
+			}
+			if ( ! empty( $attributes['enableExtraTaxonomies'] ) && ! empty( $attributes['extraTaxonomies'] ) ) {
+				foreach ( explode( ',', (string) $attributes['extraTaxonomies'] ) as $slug ) {
+					// Categories and tags have their own legacy toggles; they were never extras.
+					if ( in_array( trim( strtolower( $slug ) ), array( 'category', 'post_tag' ), true ) ) {
+						continue;
+					}
+					$entries[] = array(
+						'slug'        => $slug,
+						'controlType' => isset( $attributes['extraTaxonomiesControlType'] ) ? $attributes['extraTaxonomiesControlType'] : '',
+					);
+				}
+			}
+		}
+
+		$taxonomies = array();
+		foreach ( $entries as $entry ) {
+			$slug = is_array( $entry ) && isset( $entry['slug'] ) ? sanitize_key( $entry['slug'] ) : '';
+			if ( '' === $slug || isset( $taxonomies[ $slug ] ) || ! taxonomy_exists( $slug ) ) {
+				continue;
+			}
+			$control_type = isset( $entry['controlType'] ) ? (string) $entry['controlType'] : '';
+
+			$taxonomies[ $slug ] = in_array( $control_type, array( 'select', 'buttons' ), true ) ? $control_type : 'checkboxes';
+		}
+
+		return $taxonomies;
 	}
 
 	/**

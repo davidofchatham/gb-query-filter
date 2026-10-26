@@ -57,9 +57,13 @@ The tags are seeded onto the four fixture posts. The extra taxonomy is `departme
 
 A third page, `/gbqf-buttons/`, carries one filter block and no loop: Categories as the `buttons` control, Apply on, and `buttonClass` / `applyClass` seeded with dirty values (leading dots, a quote, angle brackets). §6 reads the radio group (`role="group"` named by its label, "Any" first with `value=""` and checked, one radio per term), the sanitized `buttonClass` tokens on every option (the checked one included) and no class data attributes, the Apply button, and the id checks. Rendering `buttons` as a select instead fails 8 of its 12 assertions. The seeder JSON-encodes the block with `JSON_HEX_TAG` and `wp_slash`es it: a raw `<` is stripped by kses under wp-cli, and an unslashed insert eats the JSON backslashes, either of which renders the block with default attributes and no error.
 
+### Taxonomy-list page (v7)
+
+A fourth page, `/gbqf-taxlist/`, carries one filter block and no loop, driven by the `taxonomies` attribute: `[post_tag select, category buttons, an unregistered slug, category again]`, with the legacy attributes seeded to contradict it (categories and tags on, as checkbox sets). §6 reads the rendered form for the four rules the list adds: display order is the list's (tags before categories; the legacy order is the reverse), control type is per taxonomy, the unregistered and repeated entries render nothing extra, and the legacy attributes are ignored once the list exists (any checkbox set means the fallback fired). Blocks saved before the attribute existed take the legacy path, which pages `taxonomy` and `buttons` still exercise.
+
 ## Current result
 
-**84 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v6, against the `feat/button-filters` branch (the `buttons` control). Through v5, 72 passed on 0.4.0 plus the pagination-key fix and the taxonomy labeling fix (14 of the 72 fail against the pre-fix markup).
+**92 passed** on `testbed` (GenerateBlocks 2.4.0, Meta Box Lite 2.8.0, ACF Pro 6.8.7, scope `targeted`), blueprint v7, against the `feat/sidebar-redesign` branch (the `taxonomies` attribute). Through v6, 84 passed against the `feat/button-filters` branch (the `buttons` control). Through v5, 72 passed on 0.4.0 plus the pagination-key fix and the taxonomy labeling fix (14 of the 72 fail against the pre-fix markup).
 
 ## What it caught
 

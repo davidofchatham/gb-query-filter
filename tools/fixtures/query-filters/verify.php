@@ -314,6 +314,24 @@ if ( ! $tx_pages ) {
 	}
 }
 
+// --- v7: taxonomy-list page ---------------------------------------------------
+$tl       = $manifest['taxlist'];
+$tl_pages = get_posts(
+	array(
+		'post_type'      => 'page',
+		'name'           => $tl['page']['slug'],
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+	)
+);
+if ( ! $tl_pages ) {
+	$bad( "page {$tl['page']['slug']} missing or unpublished" );
+} elseif ( false === strpos( $tl_pages[0]->post_content, '"taxonomies":[{"slug":"post_tag"' ) ) {
+	$bad( "page {$tl['page']['slug']} does not carry the `taxonomies` attribute — the list rule is unmeasured" );
+} else {
+	$ok( "page {$tl['page']['slug']} carries a `taxonomies` list" );
+}
+
 // --- environment ------------------------------------------------------------
 class_exists( '\GBQF\Filters' )
 	? $ok( 'gb-query-filter loaded' )

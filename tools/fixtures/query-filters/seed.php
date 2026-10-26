@@ -522,4 +522,12 @@ $upsert_page(
 	wp_slash( '<!-- wp:gbqf/query-filter ' . wp_json_encode( $manifest['buttons']['attrs'], JSON_HEX_TAG ) . ' /-->' )
 );
 
+// ---------------------------------------------------------------------------
+// v7. The taxonomy-list page: one filter block driven by `taxonomies`, no loop.
+// ---------------------------------------------------------------------------
+$upsert_page(
+	$manifest['taxlist']['page'],
+	wp_slash( '<!-- wp:gbqf/query-filter ' . wp_json_encode( $manifest['taxlist']['attrs'], JSON_HEX_TAG ) . ' /-->' )
+);
+
 WP_CLI::success( '[query-filters] seeded (manifest v' . $manifest['version'] . ')' );

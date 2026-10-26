@@ -69,8 +69,10 @@ return array(
 	 * needs a `<label for>` — was unmeasured.
 	 *
 	 * v6 adds the `buttons` control, on its own page (`buttons`, below).
+	 *
+	 * v7 adds the `taxonomies` attribute, on its own page (`taxlist`, below).
 	 */
-	'version'       => 6,
+	'version'       => 7,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
@@ -385,6 +387,54 @@ return array(
 			'enableAjax'            => false,
 			'buttonClass'           => ' .fx-btn  evil"<x> ',
 			'applyClass'            => '.fx-apply',
+		),
+	),
+
+	/*
+	 * v7. The taxonomy-list page: one filter block driven by the `taxonomies`
+	 * attribute, no loop.
+	 *
+	 * The list is chosen so each rule is observable on its own:
+	 *   - tags BEFORE categories, so display order is the list's order, not the
+	 *     legacy categories-then-tags order;
+	 *   - tags as `select`, categories as `buttons`: control type is per taxonomy;
+	 *   - an unregistered slug and a repeated `category`: both dropped, so exactly
+	 *     one Categories field renders.
+	 * The LEGACY attributes are seeded to contradict the list (categories on, as
+	 * a checkbox set). Once `taxonomies` is present they must be ignored, so a
+	 * checkbox set here means the fallback fired when it should not have.
+	 */
+	'taxlist'       => array(
+		'page'  => array(
+			'slug'  => 'gbqf-taxlist',
+			'title' => 'GBQF taxonomy list',
+		),
+		'attrs' => array(
+			'targetId'              => '',
+			'enableSearch'          => false,
+			'enableAjax'            => false,
+			'taxonomies'            => array(
+				array(
+					'slug'        => 'post_tag',
+					'controlType' => 'select',
+				),
+				array(
+					'slug'        => 'category',
+					'controlType' => 'buttons',
+				),
+				array(
+					'slug'        => 'gbqf-no-such-taxonomy',
+					'controlType' => 'checkboxes',
+				),
+				array(
+					'slug'        => 'category',
+					'controlType' => 'checkboxes',
+				),
+			),
+			'enableCategories'      => true,
+			'categoriesControlType' => 'checkboxes',
+			'enableTags'            => true,
+			'tagsControlType'       => 'checkboxes',
 		),
 	),
 
