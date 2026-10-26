@@ -652,6 +652,42 @@ n=$(count_re "${TL}" '<input type="checkbox"')
 
 check_refs "${TL}" 'taxonomy-list page'
 
+# v8. The search label, on its own page (blueprint v8): two search-only filter
+# blocks, the first with `hideSearchLabel` unset (the upgrade case: an existing
+# block omits the attribute), the second with it on. Issue #6, ADR-0003 "Visible
+# labels by default".
+#
+# Counted across the page, so a visible-label block that kept its placeholder
+# shows up as a second placeholder rather than hiding behind the opt-out block.
+SL_PAGE='gbqf-searchlabel'
+SL=$(fetch '' "${SL_PAGE}" || true)
+[ -n "${SL}" ] || err "empty response for /${SL_PAGE}/ — reseed the blueprint (v8+)."
+
+echo ""
+echo "   search label (page: /${SL_PAGE}/)"
+
+n=$(count_re "${SL}" '<label for="gbqf[0-9]+_search_input" class="gbqf-filter-label">Search</label>')
+[ "${n}" = 1 ] \
+    && ok 'search label: visible by default (block with the attribute unset)' \
+    || bad "search label: expected 1 visible label, got ${n}"
+
+n=$(count_re "${SL}" '<label for="gbqf[0-9]+_search_input" class="screen-reader-text">')
+[ "${n}" = 1 ] \
+    && ok 'search label: hidden only for the block that opted out' \
+    || bad "search label: expected 1 screen-reader-only label, got ${n}"
+
+n=$(count_re "${SL}" 'gbqf-filter-label">Search</label><input[^>]*placeholder=')
+[ "${n}" = 0 ] \
+    && ok 'search label: a visible label carries no placeholder' \
+    || bad "search label: ${n} input(s) repeat a visible label as a placeholder"
+
+n=$(count_re "${SL}" 'screen-reader-text">Search</label><input[^>]*placeholder="Search"')
+[ "${n}" = 1 ] \
+    && ok 'search label: the opt-out keeps the placeholder as its visible prompt' \
+    || bad "search label: expected the hidden-label input to keep its placeholder, got ${n}"
+
+check_refs "${SL}" 'search-label page'
+
 # ---------------------------------------------------------------------------
 # 7. Meta Box field filter through an ID-matched target. (blueprint v3)
 #

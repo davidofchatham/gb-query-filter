@@ -71,8 +71,10 @@ return array(
 	 * v6 adds the `buttons` control, on its own page (`buttons`, below).
 	 *
 	 * v7 adds the `taxonomies` attribute, on its own page (`taxlist`, below).
+	 *
+	 * v8 adds the search label, on its own page (`searchlabel`, below).
 	 */
-	'version'       => 7,
+	'version'       => 8,
 
 	/*
 	 * A dedicated category, so the loops can select exactly these four posts
@@ -435,6 +437,36 @@ return array(
 			'categoriesControlType' => 'checkboxes',
 			'enableTags'            => true,
 			'tagsControlType'       => 'checkboxes',
+		),
+	),
+
+	/*
+	 * v8. The search-label page: two filter blocks, search only, no loop.
+	 *
+	 * The first leaves `hideSearchLabel` unset, the second sets it. A block that
+	 * omits an attribute equal to its registered default is exactly what an
+	 * existing block looks like after upgrade, so the first block is also the
+	 * upgrade case: it must get the visible label. Placeholder-as-label is the
+	 * defect (issue #6), so the assertions count each shape across the page and a
+	 * visible-label block that kept its placeholder shows up as an extra one.
+	 */
+	'searchlabel'   => array(
+		'page'   => array(
+			'slug'  => 'gbqf-searchlabel',
+			'title' => 'GBQF search label',
+		),
+		'blocks' => array(
+			array(
+				'targetId'     => '',
+				'enableSearch' => true,
+				'enableAjax'   => false,
+			),
+			array(
+				'targetId'        => '',
+				'enableSearch'    => true,
+				'enableAjax'      => false,
+				'hideSearchLabel' => true,
+			),
 		),
 	),
 
