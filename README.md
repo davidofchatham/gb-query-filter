@@ -99,7 +99,7 @@ error.
 2.  Add the GB Query Filter block above the Query Loop.
 3.  Configure the filter settings:
     -   Link filter to Query Loop (set target ID)
-    -   Enable search field
+    -   Enable search field (the label is visible by default; switch on **Hide search label** to show "Search" as placeholder text instead)
     -   Choose taxonomies (categories, tags, custom)
     -   Add Meta Box fields (if Meta Box plugin is active)
     -   Add ACF fields (if ACF plugin is active)
@@ -149,6 +149,17 @@ target:
     ?gbqf[my-projects][meta][color]=blue
 
 Resetting a filter clears only its own parameters.
+
+## Accessibility and Styling
+
+The search field has a visible "Search" label by default. **Hide search label** is an opt-out for compact layouts: screen readers still get the label and the placeholder becomes the visible prompt, so your theme must give placeholder text at least 4.5:1 contrast.
+
+Text inputs and selects get a default border of at least 3:1 on white and a visible keyboard focus ring. The border default has zero specificity, so any border rule your theme sets on these controls wins; the theme is responsible for its own contrast. Two custom properties tune the defaults:
+
+    .gbqf-query-filter-block {
+        --gbqf-input-border: #767676;
+        --gbqf-focus-color: #0b57d0;
+    }
 
 ## Developer Notes
 

@@ -332,6 +332,28 @@ if ( ! $tl_pages ) {
 	$ok( "page {$tl['page']['slug']} carries a `taxonomies` list" );
 }
 
+// --- v8: search-label page ------------------------------------------------------
+$sl       = $manifest['searchlabel'];
+$sl_pages = get_posts(
+	array(
+		'post_type'      => 'page',
+		'name'           => $sl['page']['slug'],
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+	)
+);
+if ( ! $sl_pages ) {
+	$bad( "page {$sl['page']['slug']} missing or unpublished" );
+} else {
+	$sl_count = substr_count( $sl_pages[0]->post_content, 'wp:gbqf/query-filter' );
+	count( $sl['blocks'] ) === $sl_count
+		? $ok( "page {$sl['page']['slug']} carries {$sl_count} filter blocks" )
+		: $bad( "page {$sl['page']['slug']} carries {$sl_count} filter blocks, expected " . count( $sl['blocks'] ) );
+	1 === substr_count( $sl_pages[0]->post_content, '"hideSearchLabel":true' )
+		? $ok( "page {$sl['page']['slug']} has exactly one block hiding the label" )
+		: $bad( "page {$sl['page']['slug']} must have exactly one block with hideSearchLabel — the opt-out or the default is unmeasured" );
+}
+
 // --- environment ------------------------------------------------------------
 class_exists( '\GBQF\Filters' )
 	? $ok( 'gb-query-filter loaded' )

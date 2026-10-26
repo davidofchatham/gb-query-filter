@@ -530,4 +530,13 @@ $upsert_page(
 	wp_slash( '<!-- wp:gbqf/query-filter ' . wp_json_encode( $manifest['taxlist']['attrs'], JSON_HEX_TAG ) . ' /-->' )
 );
 
+// ---------------------------------------------------------------------------
+// v8. The search-label page: one block with the default label, one hiding it.
+// ---------------------------------------------------------------------------
+$sl_blocks = array();
+foreach ( $manifest['searchlabel']['blocks'] as $sl_attrs ) {
+	$sl_blocks[] = '<!-- wp:gbqf/query-filter ' . wp_json_encode( $sl_attrs, JSON_HEX_TAG ) . ' /-->';
+}
+$upsert_page( $manifest['searchlabel']['page'], wp_slash( implode( "\n\n", $sl_blocks ) ) );
+
 WP_CLI::success( '[query-filters] seeded (manifest v' . $manifest['version'] . ')' );
